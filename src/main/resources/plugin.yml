@@ -1,0 +1,9 @@
+name: "${project.name}"
+version: "${project.version}"
+description: "${project.description}"
+main: "com.zachsthings.liftplates.LiftPlatesPlugin"
+commands:
+    "liftplates":
+        aliases: ["lp", "liftpl"]
+        description: "Base command for LiftPlates"
+        usage: "<version|reload>"
