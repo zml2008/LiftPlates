@@ -42,6 +42,8 @@ public abstract class ChildrenCommandExecutor implements CommandExecutor {
         } else {
             try {
                 return execute(sender, command, arguments);
+            } catch (NumberFormatException e) {
+                sender.sendMessage(ChatColor.RED + "String given, number expected!");
             } catch (CommandException e) {
                 sender.sendMessage(ChatColor.RED + e.getMessage());
             }

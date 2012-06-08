@@ -47,7 +47,7 @@ public class LiftManager {
 
     public Lift getOrAddLift(BlockVector vec) {
         Lift lift = lifts.get(vec);
-        if (lift == null) {
+        if (lift == null && canPlaceLift(vec)) {
             lift = new Lift(vec);
             lift.setManager(this);
             lifts.put(vec, lift);
@@ -58,6 +58,10 @@ public class LiftManager {
 
     public boolean removeLift(BlockVector vec) {
         return lifts.remove(vec) != null;
+    }
+
+    public boolean canPlaceLift(BlockVector vec) {
+        return LiftUtil.isPressurePlate(world.getBlockAt(vec.getBlockX(), vec.getBlockY(), vec.getBlockZ()).getType());
     }
 
     public World getWorld() {
@@ -83,8 +87,7 @@ public class LiftManager {
                 continue;
             }
             Lift lift = (Lift) obj;
-            if (!LiftUtil.isPressurePlate(world.getBlockAt(lift.getPosition().getBlockX(),
-                    lift.getPosition().getBlockY(), lift.getPosition().getBlockZ()).getType())) { // The lift has been removed since the last load
+            if (!canPlaceLift(lift.getPosition())) { // The lift block has been removed since the last load
                 continue;
             }
             lift.setManager(this);

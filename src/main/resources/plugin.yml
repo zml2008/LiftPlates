@@ -7,3 +7,7 @@ commands:
         aliases: ["lp", "liftpl"]
         description: "Base command for ${project.name}"
         usage: "/<command> <version|reload>"
+    "lift":
+        aliases: ["mklift", "createlift"]
+        description: "Create a new lift"
+        usage: "/<command> <up|down> [location]"

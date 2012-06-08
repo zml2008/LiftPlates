@@ -1,5 +1,6 @@
 package com.zachsthings.liftplates;
 
+import com.zachsthings.liftplates.commands.LiftCreationCommand;
 import com.zachsthings.liftplates.commands.LiftPlatesCommands;
 import org.apache.commons.lang.Validate;
 import org.bukkit.Location;
@@ -28,6 +29,7 @@ public class LiftPlatesPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new LiftPlatesListener(this), this);
 
         getCommand("liftplates").setExecutor(new LiftPlatesCommands(this));
+        getCommand("lift").setExecutor(new LiftCreationCommand(this));
 
         plateState = new LiftPlatesState(this);
         getServer().getScheduler().scheduleSyncRepeatingTask(this, plateState, LiftPlatesState.RUN_FREQUENCY, LiftPlatesState.RUN_FREQUENCY);
