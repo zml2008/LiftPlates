@@ -15,11 +15,11 @@ import java.util.Map;
  * Very barebones commands setup intended only for LiftPlates (Look at the WorldEdit command
  * system for a more general solution). Since LiftPlates is not a very command-focused
  * plugin, this system works fine for us.
- *
- * Interesting stuff:
- * * Implementation of (theoretically) infinite depth of child commands
- * * Allow using CommandExceptions to display errors
- * * Better usage text for children
+ *<br />
+ * Interesting stuff:<br />
+ * * Implementation of (theoretically) infinite depth of child commands<br />
+ * * Allow using CommandExceptions to display errors<br />
+ * * Better usage text for children<br />
  */
 public abstract class ChildrenCommandExecutor implements CommandExecutor {
     private Map<String, ChildrenCommandExecutor> children = new HashMap<String, ChildrenCommandExecutor>();

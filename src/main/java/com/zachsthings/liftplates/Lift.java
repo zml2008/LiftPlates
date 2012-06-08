@@ -1,11 +1,15 @@
 package com.zachsthings.liftplates;
 
+import com.zachsthings.liftplates.util.IntPairKey;
 import org.apache.commons.lang.Validate;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
+import org.bukkit.entity.Entity;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.material.MaterialData;
 import org.bukkit.util.BlockVector;
 
@@ -169,20 +173,28 @@ public class Lift implements ConfigurationSerializable {
     /**
      * Move the lift and all the blocks the lift is composed of in the given direction
      *
-     * @param direction The direction to move in
+     * @param direction The direction to move in.
+     * @return Whether the lift could be successfully moved.
+     *      This will return false if the lift tries to move to an already occupied position.
      */
-    public void move(BlockFace direction) {
+    public boolean move(BlockFace direction) {
         // Get blocks
         Map<Location, MaterialData> blockChanges = new TreeMap<Location, MaterialData>(LiftUtil.LOCATION_Y_COMPARE);
         Set<Location> blocks = getBlocks();
+        Set<Long> chunks = new HashSet<Long>();
 
         // Move
         for (Location loc : blocks) {
             Block oldBlock = loc.getBlock();
             Location newLoc = LiftUtil.mod(loc, direction);
+            Block newBlock = newLoc.getBlock();
             blockChanges.put(newLoc, oldBlock.getType().getNewData(oldBlock.getData()));
             if (!blockChanges.containsKey(loc)) {
                 blockChanges.put(loc, new MaterialData(Material.AIR));
+            }
+
+            if (!newBlock.isEmpty() && !blocks.contains(newLoc)) {
+                return false;
             }
 
             // Update the location of any lifts in the moving blocks
@@ -193,12 +205,27 @@ public class Lift implements ConfigurationSerializable {
             if (testLift != null) {
                 testLift.position = vec;
             }
+
+            chunks.add(IntPairKey.key(oldBlock.getChunk().getX(), oldBlock.getChunk().getZ()));
+        }
+
+        for (long chunkCoord : chunks) {
+            Chunk chunk = manager.getWorld().getChunkAt(IntPairKey.key1(chunkCoord), IntPairKey.key2(chunkCoord));
+            for (Entity entity : chunk.getEntities()) {
+                Location entLoc = entity.getLocation();
+                if (blocks.contains(entLoc)) {
+                    entity.teleport(entLoc.add(direction.getModX(),
+                            direction.getModY(), direction.getModZ()), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                }
+            }
         }
 
         for (Map.Entry<Location, MaterialData> entry : blockChanges.entrySet()) {
             Block block = entry.getKey().getBlock();
             block.setTypeIdAndData(entry.getValue().getItemTypeId(), entry.getValue().getData(), true);
         }
+
+        return true;
     }
 
     // -- Dinnerconfig Serialization methods
