@@ -152,6 +152,10 @@ public class Lift implements ConfigurationSerializable {
 
         validLocations.add(current);
 
+        for (int i = 1; i < config.liftHeight; ++i) {
+            validLocations.add(current.clone().add(0, i, 0));
+        }
+
         for (BlockFace face : LiftUtil.NSEW_FACES) {
             Location newLoc = LiftUtil.mod(current, face);
             if (visited.contains(newLoc)) {

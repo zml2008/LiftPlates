@@ -27,6 +27,12 @@ public class LiftPlatesConfig extends ConfigurationBase {
      */
     @Setting("max-lift-size") public int maxLiftSize = 5;
 
+    /**
+     * How many blocks tall the lift should be. Setting to below 2 causes issues with the
+     * lift functioning, since pressure plates will not be brought along with the lift
+     */
+    @Setting("lift-height") public int liftHeight = 2;
+
     public Map<SpecialBlock, Material> specialBlocks = new HashMap<SpecialBlock, Material>();
 
     public void load(ConfigurationSection section) {
