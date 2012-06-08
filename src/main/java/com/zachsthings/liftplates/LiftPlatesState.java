@@ -1,7 +1,9 @@
 package com.zachsthings.liftplates;
 
 import com.google.common.collect.Sets;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -16,6 +18,15 @@ public class LiftPlatesState implements Runnable {
 
     public LiftPlatesState(LiftPlatesPlugin plugin) {
         this.plugin = plugin;
+    }
+
+    private class PlayerState {
+        private final Player player;
+        private boolean travelling;
+
+        private PlayerState(Player player) {
+            this.player = player;
+        }
     }
 
     public void run() {

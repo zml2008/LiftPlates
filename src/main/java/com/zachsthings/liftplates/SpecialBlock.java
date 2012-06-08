@@ -7,6 +7,7 @@ import org.bukkit.Material;
  */
 public enum SpecialBlock {
     PAUSE(Material.IRON_BLOCK),
+    STATION(Material.GOLD_BLOCK),
     ;
     private final Material type;
 

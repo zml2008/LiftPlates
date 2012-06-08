@@ -5,5 +5,5 @@ main: "com.zachsthings.liftplates.LiftPlatesPlugin"
 commands:
     "liftplates":
         aliases: ["lp", "liftpl"]
-        description: "Base command for LiftPlates"
-        usage: "<version|reload>"
+        description: "Base command for ${project.name}"
+        usage: "/<command> <version|reload>"
