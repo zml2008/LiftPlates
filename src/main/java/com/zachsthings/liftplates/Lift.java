@@ -177,7 +177,7 @@ public class Lift implements ConfigurationSerializable {
      * @return Whether the lift could be successfully moved.
      *      This will return false if the lift tries to move to an already occupied position.
      */
-    public boolean move(BlockFace direction) {
+    public boolean move(BlockFace direction) { // We might want to cache the data used in here for elevator trips. Will reduce server load
         // Get blocks
         Map<Location, MaterialData> blockChanges = new TreeMap<Location, MaterialData>(LiftUtil.LOCATION_Y_COMPARE);
         Set<Location> blocks = getBlocks();

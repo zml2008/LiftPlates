@@ -83,8 +83,10 @@ public class LiftManager {
                 continue;
             }
             Lift lift = (Lift) obj;
-            if (LiftUtil.isPressurePlate(world.getBlockAt(lift.getPosition().getBlockX(),
-                    lift.getPosition().getBlockY(), lift.getPosition().getBlockZ()).getType()));
+            if (!LiftUtil.isPressurePlate(world.getBlockAt(lift.getPosition().getBlockX(),
+                    lift.getPosition().getBlockY(), lift.getPosition().getBlockZ()).getType())) { // The lift has been removed since the last load
+                continue;
+            }
             lift.setManager(this);
             lifts.put(lift.getPosition(), lift);
         }
