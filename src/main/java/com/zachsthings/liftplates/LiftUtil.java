@@ -4,6 +4,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 import org.bukkit.util.BlockVector;
+import org.bukkit.util.Vector;
 
 import java.util.Comparator;
 
@@ -27,6 +28,17 @@ public final class LiftUtil {
      */
     public static Location mod(Location loc, BlockFace face) {
         return loc.clone().add(face.getModX(), face.getModY(), face.getModZ());
+    }
+
+    /**
+     * Apply the given BlockFace to a new copy of the vector
+     *
+     * @param vec The vector to get a modified version of
+     * @param face The face to offset by
+     * @return A copy of {@code loc} modified by the given face offset
+     */
+    public static BlockVector mod(BlockVector vec, BlockFace face) {
+        return (BlockVector) vec.clone().add(new Vector(face.getModX(), face.getModY(), face.getModZ()));
     }
 
     /**

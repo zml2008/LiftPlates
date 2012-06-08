@@ -50,7 +50,7 @@ public class Lift implements ConfigurationSerializable {
     /**
      * The position of this lift (pressure plate) in the world
      */
-    private final BlockVector position;
+    private BlockVector position;
 
     public Lift(BlockVector position) {
         this.position = position;
@@ -76,6 +76,7 @@ public class Lift implements ConfigurationSerializable {
     }
 
     /**
+     * Gets the current position of this lift
      * @see #position
      * @return This lift's position
      */
@@ -96,21 +97,42 @@ public class Lift implements ConfigurationSerializable {
         this.manager = manager;
     }
 
-    // - Motion methods
+    // -- Motion methods
 
     /**
      * Return the blocks that will be moved with this elevator
+     *
      * @return The blocks that this lift will move
      */
     public Set<Location> getBlocks() {
         Set<Location> blocks = new HashSet<Location>();
         Location location = position.toLocation(manager.getWorld());
         blocks.add(location);
-        travelBlocks(location, location, blocks);
+        travelBlocks(location, location, blocks, new HashSet<Location>());
         return blocks;
     }
 
-    private void travelBlocks(Location start, Location current, Set<Location> validLocations) {
+    /**
+     * Go through the blocks, checking for valid ones
+     * The way this works is:
+     * <ul>
+     *     <li>Adds the current location to the list of valid locations</li>
+     *     <li>Checks if the current block is within {@link LiftPlatesConfig#maxLiftSize}</li>
+     *     <li>Makes sure the current block is of the same type and data as the central block</li>
+     *     <li>If large lifts are not enabled in the configuration, also checks that the block above is a pressureplate</li>
+     *     (If any of the previous conditions are not met, the method does not continue)
+     *     <li>Adds the current location to the list of valid locations</li>
+     *     <li>Runs the method on {@link LiftUtil#NSEW_FACES}, excluding locations that have already been visited, with the same sets of valid and visited locations</li>
+     * </ul>
+     *
+     * @param start The origin block
+     * @param current The current block
+     * @param validLocations The list of already travelled and valid locations
+     * @param visited The list of already travelled (not necessarily valid) locations
+     */
+    private void travelBlocks(Location start, Location current, Set<Location> validLocations, Set<Location> visited) {
+        visited.add(current);
+
         LiftPlatesConfig config = manager.getPlugin().getConfiguration();
         final int maxDist = config.maxLiftSize * config.maxLiftSize;
         if (start.distanceSquared(current) > maxDist) { // Too far away
@@ -132,11 +154,11 @@ public class Lift implements ConfigurationSerializable {
 
         for (BlockFace face : LiftUtil.NSEW_FACES) {
             Location newLoc = LiftUtil.mod(current, face);
-            if (validLocations.contains(newLoc)) {
+            if (visited.contains(newLoc)) {
                 continue;
             }
 
-            travelBlocks(start, newLoc, validLocations);
+            travelBlocks(start, newLoc, validLocations, visited);
         }
     }
 
@@ -146,14 +168,26 @@ public class Lift implements ConfigurationSerializable {
      * @param direction The direction to move in
      */
     public void move(BlockFace direction) {
+        // Get blocks
         Map<Location, MaterialData> blockChanges = new TreeMap<Location, MaterialData>(LiftUtil.LOCATION_Y_COMPARE);
         Set<Location> blocks = getBlocks();
+
+        // Move
         for (Location loc : blocks) {
             Block oldBlock = loc.getBlock();
             Location newLoc = LiftUtil.mod(loc, direction);
             blockChanges.put(newLoc, oldBlock.getType().getNewData(oldBlock.getData()));
             if (!blockChanges.containsKey(loc)) {
                 blockChanges.put(loc, new MaterialData(Material.AIR));
+            }
+
+            // Update the location of any lifts in the moving blocks
+            // TODO: Update tile entity data (needs n.m.s code) and call LiftMoveEvent to allow other plugins to move their objects
+            // This will need a more complete object to store block data (old location, new location, type, data, tile entity data)
+            BlockVector vec = loc.toVector().toBlockVector();
+            Lift testLift = manager.getLift(vec);
+            if (testLift != null) {
+                testLift.position = vec;
             }
         }
 
@@ -163,7 +197,7 @@ public class Lift implements ConfigurationSerializable {
         }
     }
 
-    // - Dinnerconfig Serialization methods
+    // -- Dinnerconfig Serialization methods
 
     public Map<String, Object> serialize() {
         Map<String, Object> ret = new HashMap<String, Object>();
