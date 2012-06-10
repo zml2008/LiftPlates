@@ -66,7 +66,7 @@ public class LiftPlatesState implements Runnable {
                 System.out.println("Player " + state.getPlayer().getName() + " is on pressureplate at " + state.getPlayer().getLocation());
                 Lift lift = plugin.getLiftManager(state.getPlayer().getWorld()).getLift(state.getPlayer().getLocation());
                 if (lift != null) {
-                    lift.move(lift.getDirection().getFace());
+                    lift.move();
                 }
             }
         }

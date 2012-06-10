@@ -111,11 +111,29 @@ public class Lift implements ConfigurationSerializable {
      *
      * @return The blocks that this lift will move
      */
-    public Set<Point> getBlocks() {
+    public LiftContents getContents() {
         Set<Point> blocks = new HashSet<Point>();
+        Set<SpecialBlock> specialBlocks = new HashSet<SpecialBlock>();
         Point location = position.setY(position.getY() - 1);
-        travelBlocks(location, location, blocks, new HashSet<Point>());
-        return blocks;
+        travelBlocks(location, location, blocks, new HashSet<Point>(), specialBlocks);
+
+        Set<Entity> entities = new HashSet<Entity>();
+        Set<Long> chunks = new HashSet<Long>();
+        for (Point loc : blocks) {
+            chunks.add(IntPairKey.key(loc.getX() >> 4, loc.getZ() >> 4));
+        }
+
+        for (long chunkCoord : chunks) {
+            Chunk chunk = manager.getWorld().getChunkAt(IntPairKey.key1(chunkCoord), IntPairKey.key2(chunkCoord));
+            for (Entity entity : chunk.getEntities()) {
+                Location entLoc = entity.getLocation();
+                if (blocks.contains(new Point(entLoc))) {
+                    entities.add(entity);
+                }
+            }
+        }
+
+        return new LiftContents(specialBlocks, blocks, entities);
     }
 
     /**
@@ -136,12 +154,16 @@ public class Lift implements ConfigurationSerializable {
      * @param validLocations The list of already travelled and valid locations
      * @param visited The list of already travelled (not necessarily valid) locations
      */
-    private void travelBlocks(Point start, Point current, Set<Point> validLocations, Set<Point> visited) {
+    private void travelBlocks(Point start, Point current, Set<Point> validLocations, Set<Point> visited, Set<SpecialBlock> specialBlocks) {
         visited.add(current);
 
         LiftPlatesConfig config = manager.getPlugin().getConfiguration();
         final int maxDist = config.maxLiftSize * config.maxLiftSize;
         if (start.distanceSquared(current) > maxDist) { // Too far away
+            SpecialBlock block = getSpecialBlock(current.getBlock(manager.getWorld()).getType());
+            if (block != null) {
+                specialBlocks.add(block);
+            }
             return;
         }
 
@@ -149,10 +171,19 @@ public class Lift implements ConfigurationSerializable {
         Block startBlock = start.getBlock(manager.getWorld());
         if (currentBlock.getTypeId() != startBlock.getTypeId()
                 || currentBlock.getData() != startBlock.getData()) { // Different block type
+            SpecialBlock block = getSpecialBlock(currentBlock.getType());
+            if (block != null) {
+                specialBlocks.add(block);
+            }
             return;
         }
 
-        if (!config.recursiveLifts && !LiftUtil.isPressurePlate(current.modify(BlockFace.UP).getBlock(manager.getWorld()).getType())) { // Not a pressure plate
+        if (!config.recursiveLifts
+                && !LiftUtil.isPressurePlate(current.modify(BlockFace.UP).getBlock(manager.getWorld()).getType())) { // Not a pressure plate
+            SpecialBlock block = getSpecialBlock(currentBlock.getType());
+            if (block != null) {
+                specialBlocks.add(block);
+            }
             return;
         }
 
@@ -168,8 +199,14 @@ public class Lift implements ConfigurationSerializable {
                 continue;
             }
 
-            travelBlocks(start, newLoc, validLocations, visited);
+            travelBlocks(start, newLoc, validLocations, visited, specialBlocks);
         }
+    }
+
+    public SpecialBlock getSpecialBlock(Material mat) {
+        SpecialBlock block = manager.getPlugin().getConfiguration().specialBlocks.get(mat);
+        // TODO: Per-lift special block overrides
+        return block;
     }
 
     /**
@@ -192,8 +229,7 @@ public class Lift implements ConfigurationSerializable {
      */
     public boolean move(BlockFace direction) { // We might want to cache the data used in here for elevator trips. Will reduce server load
         // Get blocks
-        Set<Point> blocks = getBlocks();
-        Set<Long> chunks = new HashSet<Long>();
+        LiftContents contents = getContents();
         BlockQueue removeBlocks = new BlockQueue(manager.getWorld(), BlockQueue.BlockOrder.TOP_DOWN);
         BlockQueue addBlocks = new BlockQueue(manager.getWorld(), BlockQueue.BlockOrder.BOTTOM_UP) {
             @Override
@@ -210,25 +246,24 @@ public class Lift implements ConfigurationSerializable {
         };
 
         // Move
-        for (Point loc : blocks) {
+        for (Point loc : contents.getBlocks()) {
             Block oldBlock = loc.getBlock(manager.getWorld());
             Point newLoc = loc.modify(direction);
             Block newBlock = newLoc.getBlock(manager.getWorld());
 
-            if (!newBlock.isEmpty() && !blocks.contains(newLoc)) {
+            if (!newBlock.isEmpty() && !contents.getBlocks().contains(newLoc)) {
                 return false;
             }
 
             addBlocks.set(newLoc, oldBlock.getType().getNewData(oldBlock.getData()));
             removeBlocks.set(loc, new MaterialData(Material.AIR));
 
-            chunks.add(IntPairKey.key(oldBlock.getChunk().getX(), oldBlock.getChunk().getZ()));
         }
 
         // Update the location of any lifts in the moving blocks
         // TODO: Update tile entity data (needs n.m.s code) and call LiftMoveEvent to allow other plugins to move their objects
         // This will need a more complete object to store block data (old location, new location, type, data, tile entity data)
-        for (Point loc : blocks) {
+        for (Point loc : contents.getBlocks()) {
             Lift testLift = manager.getLift(loc);
             if (testLift != null) {
                 testLift.position = loc.modify(direction);
@@ -236,16 +271,10 @@ public class Lift implements ConfigurationSerializable {
         }
 
         removeBlocks.apply();
+        for (Entity entity : contents.getEntities()) {
+            entity.teleport(entity.getLocation().add(direction.getModX(),
+                direction.getModY(), direction.getModZ()), PlayerTeleportEvent.TeleportCause.PLUGIN);
 
-        for (long chunkCoord : chunks) {
-            Chunk chunk = manager.getWorld().getChunkAt(IntPairKey.key1(chunkCoord), IntPairKey.key2(chunkCoord));
-            for (Entity entity : chunk.getEntities()) {
-                Location entLoc = entity.getLocation();
-                if (blocks.contains(new Point(entLoc))) {
-                    entity.teleport(entLoc.add(direction.getModX(),
-                            direction.getModY(), direction.getModZ()), PlayerTeleportEvent.TeleportCause.PLUGIN);
-                }
-            }
         }
 
         addBlocks.apply();

@@ -6,7 +6,9 @@ import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author zml2008
@@ -33,23 +35,26 @@ public class LiftPlatesConfig extends ConfigurationBase {
      */
     @Setting("lift-height") public int liftHeight = 2;
 
-    public Map<SpecialBlock, Material> specialBlocks = new HashMap<SpecialBlock, Material>();
+    public Map<Material, SpecialBlock> specialBlocks = new HashMap<Material, SpecialBlock>();
 
     public void load(ConfigurationSection section) {
         super.load(section);
+
+        Set<SpecialBlock> storedSpecialBlocks = new HashSet<SpecialBlock>();
 
         for (Map.Entry<String, String> entry : rawSpecialBlocks.entrySet()) {
             SpecialBlock block = SpecialBlock.byName(entry.getKey());
             Material mat = Material.matchMaterial(entry.getValue());
             if (block != null && mat != null) {
-                specialBlocks.put(block, mat);
+                specialBlocks.put(mat, block);
+                storedSpecialBlocks.add(block);
             }
         }
 
         boolean changed = false;
         for (SpecialBlock type : SpecialBlock.getAll()) {
-            if (!specialBlocks.containsKey(type)) {
-                specialBlocks.put(type, type.getDefaultType());
+            if (!storedSpecialBlocks.contains(type)) {
+                specialBlocks.put(type.getDefaultType(), type);
                 changed = true;
             }
         }
@@ -61,8 +66,8 @@ public class LiftPlatesConfig extends ConfigurationBase {
 
     public void save(ConfigurationSection section) {
         rawSpecialBlocks.clear();
-        for (Map.Entry<SpecialBlock, Material> entry : specialBlocks.entrySet()) {
-            rawSpecialBlocks.put(entry.getKey().getName(), entry.getValue().name());
+        for (Map.Entry<Material, SpecialBlock> entry : specialBlocks.entrySet()) {
+            rawSpecialBlocks.put(entry.getValue().getName(), entry.getKey().name());
         }
 
         super.save(section);

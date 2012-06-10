@@ -24,7 +24,7 @@ public abstract class SpecialBlock {
      */
     public static final SpecialBlock PAUSE = new SpecialBlock("Pause", Material.IRON_BLOCK) {
         @Override
-        public MoveResult liftActed(LiftSnapshot lift) {
+        public MoveResult liftActed(Lift lift, LiftContents contents) {
             return new MoveResult(MoveResult.Type.DELAY, 2);
         }
     };
@@ -34,7 +34,7 @@ public abstract class SpecialBlock {
      */
     public static final SpecialBlock STATION = new SpecialBlock("Station", Material.GOLD_BLOCK) {
         @Override
-        public MoveResult liftActed(LiftSnapshot lift) {
+        public MoveResult liftActed(Lift lift, LiftContents contents) {
             return new MoveResult(MoveResult.Type.STOP);
         }
     };
@@ -44,8 +44,8 @@ public abstract class SpecialBlock {
      */
     public static final SpecialBlock STOP_UP = new SpecialBlock("StopUp", Material.OBSIDIAN) {
         @Override
-        public MoveResult liftActed(LiftSnapshot lift) {
-            if (lift.getLift().getDirection() == Lift.Direction.UP) {
+        public MoveResult liftActed(Lift lift, LiftContents contents) {
+            if (lift.getDirection() == Lift.Direction.UP) {
                 return new MoveResult(MoveResult.Type.BLOCK);
             } else {
                 return new MoveResult(MoveResult.Type.CONTINUE);
@@ -58,8 +58,8 @@ public abstract class SpecialBlock {
      */
     public static final SpecialBlock STOP_DOWN = new SpecialBlock("StopDown", Material.ICE) {
         @Override
-        public MoveResult liftActed(LiftSnapshot lift) {
-            if (lift.getLift().getDirection() == Lift.Direction.DOWN) {
+        public MoveResult liftActed(Lift lift, LiftContents contents) {
+            if (lift.getDirection() == Lift.Direction.DOWN) {
                 return new MoveResult(MoveResult.Type.BLOCK);
             } else {
                 return new MoveResult(MoveResult.Type.CONTINUE);
@@ -84,7 +84,7 @@ public abstract class SpecialBlock {
         return type;
     }
 
-    public abstract MoveResult liftActed(LiftSnapshot lift);
+    public abstract MoveResult liftActed(Lift lift, LiftContents contents);
 
     public static SpecialBlock byName(String name) {
         Validate.notNull(name);
