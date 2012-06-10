@@ -1,5 +1,6 @@
 package com.zachsthings.liftplates;
 
+import com.zachsthings.liftplates.util.BlockQueue;
 import com.zachsthings.liftplates.util.IntPairKey;
 import com.zachsthings.liftplates.util.Point;
 import org.apache.commons.lang.Validate;
@@ -194,34 +195,49 @@ public class Lift implements ConfigurationSerializable {
      */
     public boolean move(BlockFace direction) { // We might want to cache the data used in here for elevator trips. Will reduce server load
         // Get blocks
-        Map<Point, MaterialData> blockChanges = new TreeMap<Point, MaterialData>(LiftUtil.POINT_Y_COMPARE);
         Set<Point> blocks = getBlocks();
         Set<Long> chunks = new HashSet<Long>();
+        BlockQueue removeBlocks = new BlockQueue(manager.getWorld(), BlockQueue.BlockOrder.TOP_DOWN);
+        BlockQueue addBlocks = new BlockQueue(manager.getWorld(), BlockQueue.BlockOrder.BOTTOM_UP) {
+            @Override
+            protected MaterialData modifyMaterialData(MaterialData input) {
+                if (LiftUtil.isPressurePlate(input.getItemType())) {
+                    input.setData((byte) 0x0); // Unpress any pressure plates -- these aren't updated correctly when the block is moved
+                } else if (input.getItemType() == Material.STONE_BUTTON) {
+                    ((Button) input).setPowered(false); // Same for buttons
+                } else if (input.getItemType() == Material.REDSTONE_TORCH_OFF) {
+                    input = Material.REDSTONE_TORCH_ON.getNewData(input.getData());
+                }
+                return super.modifyMaterialData(input);
+            }
+        };
 
         // Move
         for (Point loc : blocks) {
             Block oldBlock = loc.getBlock(manager.getWorld());
             Point newLoc = loc.modify(direction);
             Block newBlock = newLoc.getBlock(manager.getWorld());
-            blockChanges.put(newLoc, oldBlock.getType().getNewData(oldBlock.getData()));
-            if (!blockChanges.containsKey(loc)) {
-                blockChanges.put(loc, new MaterialData(Material.AIR));
-            }
 
             if (!newBlock.isEmpty() && !blocks.contains(newLoc)) {
                 return false;
             }
-
-            // Update the location of any lifts in the moving blocks
-            // TODO: Update tile entity data (needs n.m.s code) and call LiftMoveEvent to allow other plugins to move their objects
-            // This will need a more complete object to store block data (old location, new location, type, data, tile entity data)
-            Lift testLift = manager.getLift(loc);
-            if (testLift != null) {
-                testLift.position = newLoc;
-            }
+            addBlocks.set(newLoc, oldBlock.getType().getNewData(oldBlock.getData()));
+                removeBlocks.set(loc, new MaterialData(Material.AIR));
 
             chunks.add(IntPairKey.key(oldBlock.getChunk().getX(), oldBlock.getChunk().getZ()));
         }
+
+        // Update the location of any lifts in the moving blocks
+        // TODO: Update tile entity data (needs n.m.s code) and call LiftMoveEvent to allow other plugins to move their objects
+        // This will need a more complete object to store block data (old location, new location, type, data, tile entity data)
+        for (Point loc : blocks) {
+            Lift testLift = manager.getLift(loc);
+            if (testLift != null) {
+                testLift.position = loc.modify(direction);
+            }
+        }
+
+        removeBlocks.apply();
 
         for (long chunkCoord : chunks) {
             Chunk chunk = manager.getWorld().getChunkAt(IntPairKey.key1(chunkCoord), IntPairKey.key2(chunkCoord));
@@ -234,18 +250,7 @@ public class Lift implements ConfigurationSerializable {
             }
         }
 
-        for (Map.Entry<Point, MaterialData> entry : blockChanges.entrySet()) {
-            if (LiftUtil.isPressurePlate(entry.getValue().getItemType())) {
-                entry.getValue().setData((byte) 0x0); // Unpress any pressure plates -- these aren't updated correctly when the block is moved
-            } else if (entry.getValue().getItemType() == Material.STONE_BUTTON) {
-                ((Button) entry.getValue()).setPowered(false); // Same for buttons
-            } else if (entry.getValue().getItemType() == Material.REDSTONE_TORCH_OFF) {
-                entry.setValue(Material.REDSTONE_TORCH_ON.getNewData(entry.getValue().getData()));
-            }
-
-            Block block = entry.getKey().getBlock(manager.getWorld());
-            block.setTypeIdAndData(entry.getValue().getItemTypeId(), entry.getValue().getData(), entry.getValue().getItemType() != Material.AIR);
-        }
+        addBlocks.apply();
         manager.updateLiftLocations();
 
         return true;

@@ -44,4 +44,13 @@ public final class LiftUtil {
             return a.getY() - b.getY();
         }
     };
+
+    /**
+     * A {@link Comparator} instance that compares objects by their height
+     */
+    public static final Comparator<Point> POINT_Y_COMPARE_REVERSE = new Comparator<Point>() {
+        public int compare(Point a, Point b) {
+            return b.getY() - a.getY();
+        }
+    };
 }
