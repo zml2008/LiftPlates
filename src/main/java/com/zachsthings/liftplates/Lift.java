@@ -10,19 +10,16 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
-import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.configuration.serialization.SerializableAs;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.material.Button;
 import org.bukkit.material.MaterialData;
-import org.bukkit.material.PressurePlate;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 /**
  * @author zml2008
@@ -162,7 +159,7 @@ public class Lift implements ConfigurationSerializable {
         validLocations.add(current);
 
         for (int i = 1; i < config.liftHeight; ++i) {
-            validLocations.add(current.add(0, i, 0));
+            validLocations.add(current.setY(current.getY() + i));
         }
 
         for (BlockFace face : LiftUtil.NSEW_FACES) {
@@ -221,8 +218,9 @@ public class Lift implements ConfigurationSerializable {
             if (!newBlock.isEmpty() && !blocks.contains(newLoc)) {
                 return false;
             }
+
             addBlocks.set(newLoc, oldBlock.getType().getNewData(oldBlock.getData()));
-                removeBlocks.set(loc, new MaterialData(Material.AIR));
+            removeBlocks.set(loc, new MaterialData(Material.AIR));
 
             chunks.add(IntPairKey.key(oldBlock.getChunk().getX(), oldBlock.getChunk().getZ()));
         }

@@ -40,13 +40,15 @@ public class BlockQueue {
         }
     }
 
+    private final BlockOrder order;
     private final World world;
-    private final SortedMap<Point, MaterialData> changesNormal;
+    private final Map<Point, MaterialData> changesNormal;
     private final Map<Point, MaterialData> changesLast;
 
     public BlockQueue(World world, BlockOrder order) {
         this.world = world;
-        changesNormal = new TreeMap<Point, MaterialData>(order.getComparator());
+        this.order = order;
+        changesNormal = new HashMap<Point, MaterialData>();
         changesLast = new HashMap<Point, MaterialData>();
     }
 
@@ -67,7 +69,14 @@ public class BlockQueue {
     }
 
     public void apply() {
-        for (Map.Entry<Point, MaterialData> entry : changesNormal.entrySet()) {
+        List<Map.Entry<Point, MaterialData>> changesNormalList = new ArrayList<Map.Entry<Point, MaterialData>>(changesNormal.entrySet());
+        Collections.sort(changesNormalList, new Comparator<Map.Entry<Point, MaterialData>>() {
+            public int compare(Map.Entry<Point, MaterialData> a, Map.Entry<Point, MaterialData> b) {
+                return order.getComparator().compare(a.getKey(), b.getKey());
+            }
+        });
+
+        for (Map.Entry<Point, MaterialData> entry : changesNormalList) {
             MaterialData type = modifyMaterialData(entry.getValue());
             entry.getKey().getBlock(world).setTypeIdAndData(type.getItemTypeId(),
                     type.getData(), !setNoPhysics(type.getItemType()));
@@ -75,6 +84,7 @@ public class BlockQueue {
 
         for (Map.Entry<Point, MaterialData> entry : changesLast.entrySet()) {
             MaterialData type = modifyMaterialData(entry.getValue());
+            System.out.println("Setting (stage last) block at " + entry.getKey() + " to " + type);
             entry.getKey().getBlock(world).setTypeIdAndData(type.getItemTypeId(),
                     type.getData(), !setNoPhysics(type.getItemType()));
         }
