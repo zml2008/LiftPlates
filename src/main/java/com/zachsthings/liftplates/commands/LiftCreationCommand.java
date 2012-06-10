@@ -2,16 +2,14 @@ package com.zachsthings.liftplates.commands;
 
 import com.zachsthings.liftplates.Lift;
 import com.zachsthings.liftplates.LiftPlatesPlugin;
-import com.zachsthings.liftplates.LiftUtil;
 import com.zachsthings.liftplates.util.Point;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandException;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.util.BlockVector;
 
 /**
  * The command used to create a new lift
@@ -53,7 +51,7 @@ public class LiftCreationCommand extends ChildrenCommandExecutor {
 
         lift.setDirection(direction);
 
-        sender.sendMessage("Lift successfully created!");
+        sender.sendMessage(ChatColor.BLUE + "Lift successfully created!");
         return true;
     }
 

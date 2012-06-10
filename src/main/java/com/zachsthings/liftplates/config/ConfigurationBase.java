@@ -60,7 +60,7 @@ public class ConfigurationBase {
             try {
                 Object val = field.get(this);
                 doSave(val, setting.value(), section);
-            } catch (IllegalAccessException e) {
+            } catch (IllegalAccessException ignore) {
             }
         }
     }
