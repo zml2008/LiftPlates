@@ -84,7 +84,6 @@ public class BlockQueue {
 
         for (Map.Entry<Point, MaterialData> entry : changesLast.entrySet()) {
             MaterialData type = modifyMaterialData(entry.getValue());
-            System.out.println("Setting (stage last) block at " + entry.getKey() + " to " + type);
             entry.getKey().getBlock(world).setTypeIdAndData(type.getItemTypeId(),
                     type.getData(), !setNoPhysics(type.getItemType()));
         }

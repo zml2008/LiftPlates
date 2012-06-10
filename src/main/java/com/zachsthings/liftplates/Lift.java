@@ -39,7 +39,7 @@ public class Lift implements ConfigurationSerializable {
         }
 
         /**
-         * Gets the BlockFace this direction corresponds to. This can be used with {@link Lift#move(BlockFace)}.
+         * Gets the BlockFace this direction corresponds to. This can be used with {@link LiftContents#move(BlockFace, boolean)}.
          *
          * @return this direction's BlockFace.
          */
@@ -91,6 +91,10 @@ public class Lift implements ConfigurationSerializable {
         return position;
     }
 
+    void setPosition(Point position) {
+        this.position = position;
+    }
+
     /**
      * Set the manager attached to this Lift.
      *
@@ -102,6 +106,13 @@ public class Lift implements ConfigurationSerializable {
             throw new IllegalStateException("A manager (" + manager + ") has already been set for the lift " + this);
         }
         this.manager = manager;
+    }
+
+    LiftManager getManager() {
+        if (this.manager == null) {
+            throw new IllegalStateException("This lift has not yet been attached!");
+        }
+        return this.manager;
     }
 
     // -- Motion methods
@@ -133,7 +144,7 @@ public class Lift implements ConfigurationSerializable {
             }
         }
 
-        return new LiftContents(specialBlocks, blocks, entities);
+        return new LiftContents(this, specialBlocks, blocks, entities);
     }
 
     /**
@@ -207,80 +218,6 @@ public class Lift implements ConfigurationSerializable {
         SpecialBlock block = manager.getPlugin().getConfiguration().specialBlocks.get(mat);
         // TODO: Per-lift special block overrides
         return block;
-    }
-
-    /**
-     *
-     * Moves the lift in its default direction
-     *
-     * @see #move(org.bukkit.block.BlockFace)
-     * @return Whether the motion was successful
-     */
-    public boolean move() {
-        return move(getDirection().getFace());
-    }
-
-    /**
-     * Move the lift and all the blocks the lift is composed of in the given direction
-     *
-     * @param direction The direction to move in.
-     * @return Whether the lift could be successfully moved.
-     *      This will return false if the lift tries to move to an already occupied position.
-     */
-    public boolean move(BlockFace direction) { // We might want to cache the data used in here for elevator trips. Will reduce server load
-        // Get blocks
-        LiftContents contents = getContents();
-        BlockQueue removeBlocks = new BlockQueue(manager.getWorld(), BlockQueue.BlockOrder.TOP_DOWN);
-        BlockQueue addBlocks = new BlockQueue(manager.getWorld(), BlockQueue.BlockOrder.BOTTOM_UP) {
-            @Override
-            protected MaterialData modifyMaterialData(MaterialData input) {
-                if (LiftUtil.isPressurePlate(input.getItemType())) {
-                    input.setData((byte) 0x0); // Unpress any pressure plates -- these aren't updated correctly when the block is moved
-                } else if (input.getItemType() == Material.STONE_BUTTON) {
-                    ((Button) input).setPowered(false); // Same for buttons
-                } else if (input.getItemType() == Material.REDSTONE_TORCH_OFF) {
-                    input = Material.REDSTONE_TORCH_ON.getNewData(input.getData());
-                }
-                return super.modifyMaterialData(input);
-            }
-        };
-
-        // Move
-        for (Point loc : contents.getBlocks()) {
-            Block oldBlock = loc.getBlock(manager.getWorld());
-            Point newLoc = loc.modify(direction);
-            Block newBlock = newLoc.getBlock(manager.getWorld());
-
-            if (!newBlock.isEmpty() && !contents.getBlocks().contains(newLoc)) {
-                return false;
-            }
-
-            addBlocks.set(newLoc, oldBlock.getType().getNewData(oldBlock.getData()));
-            removeBlocks.set(loc, new MaterialData(Material.AIR));
-
-        }
-
-        // Update the location of any lifts in the moving blocks
-        // TODO: Update tile entity data (needs n.m.s code) and call LiftMoveEvent to allow other plugins to move their objects
-        // This will need a more complete object to store block data (old location, new location, type, data, tile entity data)
-        for (Point loc : contents.getBlocks()) {
-            Lift testLift = manager.getLift(loc);
-            if (testLift != null) {
-                testLift.position = loc.modify(direction);
-            }
-        }
-
-        removeBlocks.apply();
-        for (Entity entity : contents.getEntities()) {
-            entity.teleport(entity.getLocation().add(direction.getModX(),
-                direction.getModY(), direction.getModZ()), PlayerTeleportEvent.TeleportCause.PLUGIN);
-
-        }
-
-        addBlocks.apply();
-        manager.updateLiftLocations();
-
-        return true;
     }
 
     // -- Dinnerconfig Serialization methods

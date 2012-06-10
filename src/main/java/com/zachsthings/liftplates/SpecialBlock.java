@@ -20,7 +20,7 @@ public abstract class SpecialBlock {
     private static final Map<String, SpecialBlock> BY_NAME = new HashMap<String, SpecialBlock>();
 
     /**
-     * Stops the lift for 2 cycles ({@link LiftPlatesState#RUN_FREQUENCY} ticks)
+     * Stops the lift for 2 cycles ({@link LiftRunner#RUN_FREQUENCY} ticks)
      */
     public static final SpecialBlock PAUSE = new SpecialBlock("Pause", Material.IRON_BLOCK) {
         @Override

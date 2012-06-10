@@ -28,7 +28,7 @@ public class LiftPlatesPlugin extends JavaPlugin {
         ConfigurationSerialization.registerClass(Lift.class);
         ConfigurationSerialization.registerClass(Point.class);
     }
-    private LiftPlatesState plateState;
+    private LiftRunner liftRunner;
     private final Map<UUID, LiftManager> liftManagers = new HashMap<UUID, LiftManager>();
     private LiftPlatesConfig config = new LiftPlatesConfig();
 
@@ -43,8 +43,8 @@ public class LiftPlatesPlugin extends JavaPlugin {
         safeSetExecutor("lift", new LiftCreationCommand(this));
         safeSetExecutor("lslifts", new ListLiftsCommand(this));
 
-        plateState = new LiftPlatesState(this);
-        getServer().getScheduler().scheduleSyncRepeatingTask(this, plateState, LiftPlatesState.RUN_FREQUENCY, LiftPlatesState.RUN_FREQUENCY);
+        liftRunner = new LiftRunner(this);
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, liftRunner, LiftRunner.RUN_FREQUENCY, LiftRunner.RUN_FREQUENCY);
     }
 
     @Override
@@ -70,8 +70,8 @@ public class LiftPlatesPlugin extends JavaPlugin {
         }
     }
 
-    public LiftPlatesState getPlateState() {
-        return plateState;
+    public LiftRunner getLiftRunner() {
+        return liftRunner;
     }
 
     public LiftPlatesConfig getConfiguration() {

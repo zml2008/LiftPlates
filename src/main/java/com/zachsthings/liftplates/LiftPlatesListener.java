@@ -31,7 +31,7 @@ public class LiftPlatesListener implements Listener {
     public void onPressPlate(PlayerInteractEvent event) {
         switch (event.getAction()) {
             case PHYSICAL:
-                plugin.getPlateState().getState(event.getPlayer()).triggeredPlate();
+                plugin.getLiftRunner().getState(event.getPlayer()).triggeredPlate();
                 break;
             case LEFT_CLICK_BLOCK:
                 BlockState state = event.getClickedBlock().getState();
@@ -66,6 +66,6 @@ public class LiftPlatesListener implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        plugin.getPlateState().clear(event.getPlayer());
+        plugin.getLiftRunner().clear(event.getPlayer());
     }
 }
