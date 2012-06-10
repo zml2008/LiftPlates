@@ -20,7 +20,7 @@ public class LiftPlatesConfig extends ConfigurationBase {
     /**
      * Allow configuration of which block types that have special functionality
      */
-    @Setting("special-blocks") public Map<String, String> rawSpecialBlocks = new HashMap<String, String>();
+    @Setting("special-blocks") private Map<String, String> rawSpecialBlocks = new HashMap<String, String>();
 
     /**
      * The maximum distance from the triggered pressure plate to look for blocks of the same type
@@ -39,7 +39,7 @@ public class LiftPlatesConfig extends ConfigurationBase {
         super.load(section);
 
         for (Map.Entry<String, String> entry : rawSpecialBlocks.entrySet()) {
-            SpecialBlock block = SpecialBlock.valueOf(entry.getKey().toUpperCase()); // TODO: Correctly handle unknown types
+            SpecialBlock block = SpecialBlock.byName(entry.getKey());
             Material mat = Material.matchMaterial(entry.getValue());
             if (block != null && mat != null) {
                 specialBlocks.put(block, mat);
@@ -47,7 +47,7 @@ public class LiftPlatesConfig extends ConfigurationBase {
         }
 
         boolean changed = false;
-        for (SpecialBlock type : SpecialBlock.values()) {
+        for (SpecialBlock type : SpecialBlock.getAll()) {
             if (!specialBlocks.containsKey(type)) {
                 specialBlocks.put(type, type.getDefaultType());
                 changed = true;
@@ -62,7 +62,7 @@ public class LiftPlatesConfig extends ConfigurationBase {
     public void save(ConfigurationSection section) {
         rawSpecialBlocks.clear();
         for (Map.Entry<SpecialBlock, Material> entry : specialBlocks.entrySet()) {
-            rawSpecialBlocks.put(entry.getKey().name(), entry.getValue().name());
+            rawSpecialBlocks.put(entry.getKey().getName(), entry.getValue().name());
         }
 
         super.save(section);
