@@ -1,6 +1,7 @@
 package com.zachsthings.liftplates;
 
 import com.zachsthings.liftplates.util.IntPairKey;
+import com.zachsthings.liftplates.util.Point;
 import org.apache.commons.lang.Validate;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -8,10 +9,13 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
+import org.bukkit.configuration.serialization.ConfigurationSerialization;
+import org.bukkit.configuration.serialization.SerializableAs;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.material.Button;
 import org.bukkit.material.MaterialData;
-import org.bukkit.util.BlockVector;
+import org.bukkit.material.PressurePlate;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,6 +26,7 @@ import java.util.TreeMap;
 /**
  * @author zml2008
  */
+@SerializableAs("LiftPlates-Lift")
 public class Lift implements ConfigurationSerializable {
 
     public static enum Direction {
@@ -54,9 +59,9 @@ public class Lift implements ConfigurationSerializable {
     /**
      * The position of this lift (pressure plate) in the world
      */
-    private BlockVector position;
+    private Point position;
 
-    public Lift(BlockVector position) {
+    public Lift(Point position) {
         this.position = position;
     }
 
@@ -84,7 +89,7 @@ public class Lift implements ConfigurationSerializable {
      * @see #position
      * @return This lift's position
      */
-    public BlockVector getPosition() {
+    public Point getPosition() {
         return position;
     }
 
@@ -108,11 +113,10 @@ public class Lift implements ConfigurationSerializable {
      *
      * @return The blocks that this lift will move
      */
-    public Set<Location> getBlocks() {
-        Set<Location> blocks = new HashSet<Location>();
-        Location location = position.toLocation(manager.getWorld());
-        blocks.add(location);
-        travelBlocks(location, location, blocks, new HashSet<Location>());
+    public Set<Point> getBlocks() {
+        Set<Point> blocks = new HashSet<Point>();
+        Point location = position.setY(position.getY() - 1);
+        travelBlocks(location, location, blocks, new HashSet<Point>());
         return blocks;
     }
 
@@ -134,7 +138,7 @@ public class Lift implements ConfigurationSerializable {
      * @param validLocations The list of already travelled and valid locations
      * @param visited The list of already travelled (not necessarily valid) locations
      */
-    private void travelBlocks(Location start, Location current, Set<Location> validLocations, Set<Location> visited) {
+    private void travelBlocks(Point start, Point current, Set<Point> validLocations, Set<Point> visited) {
         visited.add(current);
 
         LiftPlatesConfig config = manager.getPlugin().getConfiguration();
@@ -143,31 +147,42 @@ public class Lift implements ConfigurationSerializable {
             return;
         }
 
-        Block currentBlock = current.getBlock();
-        Block startBlock = start.getBlock();
+        Block currentBlock = current.getBlock(manager.getWorld());
+        Block startBlock = start.getBlock(manager.getWorld());
         if (currentBlock.getTypeId() != startBlock.getTypeId()
                 || currentBlock.getData() != startBlock.getData()) { // Different block type
             return;
         }
 
-        if (!config.recursiveLifts && !LiftUtil.isPressurePlate(LiftUtil.mod(current, BlockFace.UP).getBlock().getType())) { // Not a pressure plate
+        if (!config.recursiveLifts && !LiftUtil.isPressurePlate(current.modify(BlockFace.UP).getBlock(manager.getWorld()).getType())) { // Not a pressure plate
             return;
         }
 
         validLocations.add(current);
 
         for (int i = 1; i < config.liftHeight; ++i) {
-            validLocations.add(current.clone().add(0, i, 0));
+            validLocations.add(current.add(0, i, 0));
         }
 
         for (BlockFace face : LiftUtil.NSEW_FACES) {
-            Location newLoc = LiftUtil.mod(current, face);
+            Point newLoc = current.modify(face);
             if (visited.contains(newLoc)) {
                 continue;
             }
 
             travelBlocks(start, newLoc, validLocations, visited);
         }
+    }
+
+    /**
+     *
+     * Moves the lift in its default direction
+     *
+     * @see #move(org.bukkit.block.BlockFace)
+     * @return Whether the motion was successful
+     */
+    public boolean move() {
+        return move(getDirection().getFace());
     }
 
     /**
@@ -179,15 +194,15 @@ public class Lift implements ConfigurationSerializable {
      */
     public boolean move(BlockFace direction) { // We might want to cache the data used in here for elevator trips. Will reduce server load
         // Get blocks
-        Map<Location, MaterialData> blockChanges = new TreeMap<Location, MaterialData>(LiftUtil.LOCATION_Y_COMPARE);
-        Set<Location> blocks = getBlocks();
+        Map<Point, MaterialData> blockChanges = new TreeMap<Point, MaterialData>(LiftUtil.POINT_Y_COMPARE);
+        Set<Point> blocks = getBlocks();
         Set<Long> chunks = new HashSet<Long>();
 
         // Move
-        for (Location loc : blocks) {
-            Block oldBlock = loc.getBlock();
-            Location newLoc = LiftUtil.mod(loc, direction);
-            Block newBlock = newLoc.getBlock();
+        for (Point loc : blocks) {
+            Block oldBlock = loc.getBlock(manager.getWorld());
+            Point newLoc = loc.modify(direction);
+            Block newBlock = newLoc.getBlock(manager.getWorld());
             blockChanges.put(newLoc, oldBlock.getType().getNewData(oldBlock.getData()));
             if (!blockChanges.containsKey(loc)) {
                 blockChanges.put(loc, new MaterialData(Material.AIR));
@@ -200,10 +215,9 @@ public class Lift implements ConfigurationSerializable {
             // Update the location of any lifts in the moving blocks
             // TODO: Update tile entity data (needs n.m.s code) and call LiftMoveEvent to allow other plugins to move their objects
             // This will need a more complete object to store block data (old location, new location, type, data, tile entity data)
-            BlockVector vec = loc.toVector().toBlockVector();
-            Lift testLift = manager.getLift(vec);
+            Lift testLift = manager.getLift(loc);
             if (testLift != null) {
-                testLift.position = vec;
+                testLift.position = newLoc;
             }
 
             chunks.add(IntPairKey.key(oldBlock.getChunk().getX(), oldBlock.getChunk().getZ()));
@@ -213,17 +227,26 @@ public class Lift implements ConfigurationSerializable {
             Chunk chunk = manager.getWorld().getChunkAt(IntPairKey.key1(chunkCoord), IntPairKey.key2(chunkCoord));
             for (Entity entity : chunk.getEntities()) {
                 Location entLoc = entity.getLocation();
-                if (blocks.contains(entLoc)) {
+                if (blocks.contains(new Point(entLoc))) {
                     entity.teleport(entLoc.add(direction.getModX(),
                             direction.getModY(), direction.getModZ()), PlayerTeleportEvent.TeleportCause.PLUGIN);
                 }
             }
         }
 
-        for (Map.Entry<Location, MaterialData> entry : blockChanges.entrySet()) {
-            Block block = entry.getKey().getBlock();
-            block.setTypeIdAndData(entry.getValue().getItemTypeId(), entry.getValue().getData(), true);
+        for (Map.Entry<Point, MaterialData> entry : blockChanges.entrySet()) {
+            if (LiftUtil.isPressurePlate(entry.getValue().getItemType())) {
+                entry.getValue().setData((byte) 0x0); // Unpress any pressure plates -- these aren't updated correctly when the block is moved
+            } else if (entry.getValue().getItemType() == Material.STONE_BUTTON) {
+                ((Button) entry.getValue()).setPowered(false); // Same for buttons
+            } else if (entry.getValue().getItemType() == Material.REDSTONE_TORCH_OFF) {
+                entry.setValue(Material.REDSTONE_TORCH_ON.getNewData(entry.getValue().getData()));
+            }
+
+            Block block = entry.getKey().getBlock(manager.getWorld());
+            block.setTypeIdAndData(entry.getValue().getItemTypeId(), entry.getValue().getData(), entry.getValue().getItemType() != Material.AIR);
         }
+        manager.updateLiftLocations();
 
         return true;
     }
@@ -237,8 +260,8 @@ public class Lift implements ConfigurationSerializable {
         return ret;
     }
 
-    private static Lift deserialize(Map<String, Object> data) {
-        BlockVector position = (BlockVector) data.get("position");
+    public static Lift deserialize(Map<String, Object> data) {
+        Point position = (Point) data.get("position");
         Direction direction = Direction.valueOf(String.valueOf(data.get("direction")));
         Lift lift = new Lift(position);
         lift.direction = direction;

@@ -1,5 +1,6 @@
 name: "${project.name}"
 version: "${project.version}"
+author: "zml2008"
 description: "${project.description}"
 main: "com.zachsthings.liftplates.LiftPlatesPlugin"
 commands:
@@ -11,3 +12,6 @@ commands:
         aliases: ["mklift", "createlift"]
         description: "Create a new lift"
         usage: "/<command> <up|down> [location]"
+    "lslifts":
+        description: "List the lifts in <world>"
+        usage: "/<command> [world]"

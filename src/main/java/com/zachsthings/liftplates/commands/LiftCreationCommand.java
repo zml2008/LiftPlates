@@ -3,8 +3,10 @@ package com.zachsthings.liftplates.commands;
 import com.zachsthings.liftplates.Lift;
 import com.zachsthings.liftplates.LiftPlatesPlugin;
 import com.zachsthings.liftplates.LiftUtil;
+import com.zachsthings.liftplates.util.Point;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandException;
 import org.bukkit.command.CommandSender;
@@ -27,7 +29,7 @@ public class LiftCreationCommand extends ChildrenCommandExecutor {
             throw new CommandException("Not enough arguments! Usage: /" + command.getName() + " <up|down> [pos]");
         }
         if (arguments.length > 2) {
-            throw new CommandException("Too many arguments! Usage; /" + command.getName() + " <up|down> [pos]");
+            throw new CommandException("Too many arguments! Usage: /" + command.getName() + " <up|down> [pos]");
         }
         Lift.Direction direction;
         try {
@@ -44,7 +46,7 @@ public class LiftCreationCommand extends ChildrenCommandExecutor {
             throw new CommandException("Player or specified location required to get a lift!");
         }
 
-        Lift lift = plugin.getLiftManager(loc.getWorld()).getOrAddLift(LiftUtil.toBlockVector(loc));
+        Lift lift = plugin.getLiftManager(loc.getWorld()).getOrAddLift(new Point(loc));
         if (lift == null) {
             throw new CommandException("No pressure plate at the specified location!");
         }

@@ -1,5 +1,6 @@
 package com.zachsthings.liftplates;
 
+import com.zachsthings.liftplates.util.Point;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
@@ -30,26 +31,6 @@ public final class LiftUtil {
         return loc.clone().add(face.getModX(), face.getModY(), face.getModZ());
     }
 
-    /**
-     * Apply the given BlockFace to a new copy of the vector
-     *
-     * @param vec The vector to get a modified version of
-     * @param face The face to offset by
-     * @return A copy of {@code loc} modified by the given face offset
-     */
-    public static BlockVector mod(BlockVector vec, BlockFace face) {
-        return (BlockVector) vec.clone().add(new Vector(face.getModX(), face.getModY(), face.getModZ()));
-    }
-
-    /**
-     * Converts the coordinates of a Location directly into a BlockVector
-     * @param loc The location to BlockVectorify
-     * @return A BlockVector with the same (x, y, z) coordinates of the provided location
-     */
-    public static BlockVector toBlockVector(Location loc) {
-        return new BlockVector(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
-    }
-
     public static boolean isPressurePlate(Material mat) {
         return mat == Material.STONE_PLATE
                 || mat == Material.WOOD_PLATE;
@@ -58,9 +39,9 @@ public final class LiftUtil {
     /**
      * A {@link Comparator} instance that compares objects by their height
      */
-    public static final Comparator<Location> LOCATION_Y_COMPARE = new Comparator<Location>() {
-        public int compare(Location a, Location b) {
-            return a.getBlockY() - b.getBlockY();
+    public static final Comparator<Point> POINT_Y_COMPARE = new Comparator<Point>() {
+        public int compare(Point a, Point b) {
+            return a.getY() - b.getY();
         }
     };
 }

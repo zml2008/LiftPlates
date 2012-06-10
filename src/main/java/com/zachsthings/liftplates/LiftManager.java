@@ -1,17 +1,15 @@
 package com.zachsthings.liftplates;
 
+import com.zachsthings.liftplates.util.Point;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.util.BlockVector;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author zml2008
@@ -25,7 +23,7 @@ public class LiftManager {
     /**
      * The lifts stored in this LiftManager
      */
-    private Map<BlockVector, Lift> lifts = new HashMap<BlockVector, Lift>();
+    private Map<Point, Lift> lifts = new HashMap<Point, Lift>();
 
     public LiftManager(LiftPlatesPlugin plugin, World world) {
         this.plugin = plugin;
@@ -34,34 +32,53 @@ public class LiftManager {
         storeFile = new File(plugin.getDataFolder(), "lifts-" + world.getName() + ".yml");
     }
 
-    public Lift getLift(BlockVector vec) {
-        return lifts.get(vec);
+    public Lift getLift(Point point) {
+        return lifts.get(point);
     }
 
     public Lift getLift(Location loc) {
         if (!world.equals(loc.getWorld())) {
             throw new IllegalArgumentException("Location with mismatched world provided to world-specific LiftManager");
         }
-        return lifts.get(loc.toVector().toBlockVector());
+        return lifts.get(new Point(loc));
     }
 
-    public Lift getOrAddLift(BlockVector vec) {
-        Lift lift = lifts.get(vec);
-        if (lift == null && canPlaceLift(vec)) {
-            lift = new Lift(vec);
+    public Lift getOrAddLift(Point point) {
+        Lift lift = lifts.get(point);
+        if (lift == null && canPlaceLift(point)) {
+            lift = new Lift(point);
             lift.setManager(this);
-            lifts.put(vec, lift);
+            lifts.put(point, lift);
             save();
         }
         return lift;
     }
 
-    public boolean removeLift(BlockVector vec) {
-        return lifts.remove(vec) != null;
+    public boolean removeLift(Point point) {
+        return lifts.remove(point) != null;
     }
 
-    public boolean canPlaceLift(BlockVector vec) {
-        return LiftUtil.isPressurePlate(world.getBlockAt(vec.getBlockX(), vec.getBlockY(), vec.getBlockZ()).getType());
+    void updateLiftLocations() {
+        Set<Lift> mismatchedLocations = new HashSet<Lift>();
+        for (Iterator<Map.Entry<Point, Lift>> i = lifts.entrySet().iterator(); i.hasNext();) {
+            Map.Entry<Point, Lift> entry = i.next();
+            if (!entry.getKey().equals(entry.getValue().getPosition())) {
+                mismatchedLocations.add(entry.getValue());
+                i.remove();
+            }
+        }
+
+        for (Lift lift : mismatchedLocations) {
+            lifts.put(lift.getPosition(), lift);
+        }
+    }
+
+    public boolean canPlaceLift(Point point) {
+        return LiftUtil.isPressurePlate(point.getBlock(world).getType());
+    }
+
+    public Collection<Lift> getLifts() {
+        return lifts.values();
     }
 
     public World getWorld() {
@@ -78,16 +95,25 @@ public class LiftManager {
         } catch (FileNotFoundException e) {
         } catch (IOException e) {
             plugin.getLogger().warning("Error while loading lifts configuration: " + e.getMessage());
+            e.printStackTrace();
         } catch (InvalidConfigurationException e) {
             plugin.getLogger().warning("Error while loading lifts configuration: " + e.getMessage());
+            e.printStackTrace();
+        }
+        List<?> objects = store.getList("lifts");
+        if (objects == null) {
+            System.out.println("No 'lifts' list in the configuration!");
+            return;
         }
 
-        for (Object obj : store.getList("lifts")) {
+        for (Object obj : objects) {
             if (!(obj instanceof Lift)) {
                 continue;
             }
             Lift lift = (Lift) obj;
             if (!canPlaceLift(lift.getPosition())) { // The lift block has been removed since the last load
+                System.out.println(lift.getPosition().getBlock(world));
+                System.out.println("Cannot load lift at " + lift.getPosition());
                 continue;
             }
             lift.setManager(this);
@@ -101,6 +127,7 @@ public class LiftManager {
             store.save(storeFile);
         } catch (IOException e) {
             plugin.getLogger().warning("Error while saving lifts configuration: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
