@@ -2,6 +2,9 @@ package com.zachsthings.liftplates.util;
 
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.material.Attachable;
 import org.bukkit.material.MaterialData;
 
 import java.util.*;
@@ -14,7 +17,7 @@ public class BlockQueue {
         /**
          * Applies changes from the top down. This is most useful when clearing an area.
          */
-        TOP_DOWN(new Comparator<Point>() {
+        TOP_DOWN(true, new Comparator<Point>() {
             public int compare(Point a, Point b) {
                 return BOTTOM_UP.getComparator().compare(b, a);
             }
@@ -23,20 +26,26 @@ public class BlockQueue {
         /**
          * Applies changes from the bottom up. This is most useful when filling an area.
          */
-        BOTTOM_UP(new Comparator<Point>() {
+        BOTTOM_UP(false, new Comparator<Point>() {
             public int compare(Point a, Point b) {
                 return a.getY() - b.getY();
             }
         }),
         ;
         private final Comparator<Point> comparator;
+        private final boolean changeLastFirst;
 
-        private BlockOrder(Comparator<Point> comparator) {
+        private BlockOrder(boolean changeLastFirst, Comparator<Point> comparator) {
+            this.changeLastFirst = changeLastFirst;
             this.comparator = comparator;
         }
 
         public Comparator<Point> getComparator() {
             return comparator;
+        }
+
+        public boolean shouldChangeLastFirst() {
+            return changeLastFirst;
         }
     }
 
@@ -53,7 +62,19 @@ public class BlockQueue {
     }
 
     public void set(Point point, MaterialData mat) {
-        if (needsSideAttachment(mat.getItemType())) {
+        Block testBlock = point.getBlock(world);
+        if (testBlock.getTypeId() == mat.getItemTypeId()
+                && testBlock.getData() == mat.getData()) { // They're the same block, don't bother with a change
+            changesNormal.remove(point);
+            changesLast.remove(point);
+            return;
+        }
+        MaterialData testMat = mat;
+        if (mat.getItemType() == Material.AIR) {
+            testMat = testBlock.getType().getNewData(testBlock.getData());
+        }
+
+        if (needsSideAttachment(testMat)) {
             changesLast.put(point, mat);
             changesNormal.remove(point);
         } else {
@@ -75,14 +96,17 @@ public class BlockQueue {
                 return order.getComparator().compare(a.getKey(), b.getKey());
             }
         });
+        Iterable<Map.Entry<Point, MaterialData>> first = order.shouldChangeLastFirst() ? changesLast.entrySet() : changesNormalList;
+        Iterable<Map.Entry<Point, MaterialData>> second = order.shouldChangeLastFirst() ? changesNormalList : changesLast.entrySet();
 
-        for (Map.Entry<Point, MaterialData> entry : changesNormalList) {
+
+        for (Map.Entry<Point, MaterialData> entry : first) {
             MaterialData type = modifyMaterialData(entry.getValue());
             entry.getKey().getBlock(world).setTypeIdAndData(type.getItemTypeId(),
                     type.getData(), !setNoPhysics(type.getItemType()));
         }
 
-        for (Map.Entry<Point, MaterialData> entry : changesLast.entrySet()) {
+        for (Map.Entry<Point, MaterialData> entry : second) {
             MaterialData type = modifyMaterialData(entry.getValue());
             entry.getKey().getBlock(world).setTypeIdAndData(type.getItemTypeId(),
                     type.getData(), !setNoPhysics(type.getItemType()));
@@ -95,25 +119,20 @@ public class BlockQueue {
 
     /**
      * Returns whether the provided block requires an attachment to the side of another block
-     * @param mat The material to check
+     * @param data The material to check
      * @return Whether an attachment is required
      */
-    private static boolean needsSideAttachment(Material mat) {
-        return mat == Material.TORCH
-                || mat == Material.REDSTONE_TORCH_OFF
-                || mat == Material.REDSTONE_TORCH_ON
-                || mat == Material.LADDER
-                || mat == Material.PISTON_BASE
-                || mat == Material.PISTON_STICKY_BASE
-                || mat == Material.FIRE
-                || mat == Material.WALL_SIGN
-                || mat == Material.LEVER
-                || mat == Material.TRAP_DOOR
-                || mat == Material.FENCE_GATE;
+    private static boolean needsSideAttachment(MaterialData data) {
+        if (data instanceof Attachable && ((Attachable) data).getAttachedFace() != BlockFace.DOWN) {
+            return true;
+        }
+        Material mat = data.getItemType();
+        return mat == Material.PISTON_BASE
+                || mat == Material.PISTON_STICKY_BASE;
     }
 
     /**
-     * Returns whether pyhiscs should not be run at all when setting a block.
+     * Returns whether physics should not be run at all when setting a block.
      * This is only used for REALLY weird blocks.
      *
      * @param mat The material to check
