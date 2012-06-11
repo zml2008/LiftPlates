@@ -1,5 +1,8 @@
 package com.zachsthings.liftplates;
 
+import org.bukkit.Location;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
@@ -68,9 +71,10 @@ public class LiftRunner implements Runnable {
     public void run() {
         for (PlayerState state : playerStates.values()) {
             state.update();
+            Location plateLoc = state.getPlayer().getLocation();
 
             if (state.isOnPlate()) {
-                Lift lift = plugin.getLiftManager(state.getPlayer().getWorld()).getLift(state.getPlayer().getLocation());
+                Lift lift = plugin.getLiftManager(plateLoc.getWorld()).getLift(plateLoc);
                 if (lift != null) {
                     if (!movingLifts.containsKey(lift)) {
                         movingLifts.put(lift, new LiftState());
@@ -79,6 +83,21 @@ public class LiftRunner implements Runnable {
                         if (liftState.delay == -1) {
                             liftState.delay = 1;
                         }
+                    }
+                } else {
+                    lift = plugin.detectLift(plateLoc, true);
+                    if (lift != null) {
+                        Block bukkitBlock = plateLoc.getBlock().getRelative(BlockFace.DOWN);
+                        System.out.println("Detected lift near to " + plateLoc);
+                        SpecialBlock block = lift.getSpecialBlock(bukkitBlock.getType());
+                        if (block != null) {
+                            System.out.println("Triggered " + block.getName() + " with a plate");
+                            block.plateTriggered(lift, bukkitBlock);
+                        } else {
+                            System.out.println("Could not get special block for type " + plateLoc);
+                        }
+                    } else {
+                        System.out.println("Could not detect lift near " + plateLoc);
                     }
                 }
             }

@@ -2,6 +2,8 @@ package com.zachsthings.liftplates;
 
 import org.apache.commons.lang.Validate;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 
 import java.util.*;
 
@@ -37,6 +39,19 @@ public abstract class SpecialBlock {
         public MoveResult liftActed(Lift lift, LiftContents contents) {
             return new MoveResult(MoveResult.Type.STOP);
         }
+
+        @Override
+        public void plateTriggered(Lift lift, Block block) {
+            if (lift.getPosition().getY() > block.getY()) {
+                int diff = lift.getPosition().getY() - block.getY() - 1;
+                LiftContents contents = lift.getContents();
+                contents.move(BlockFace.DOWN, diff, true);
+            } else if (lift.getPosition().getY() < block.getY()) {
+                int diff = block.getY() - lift.getPosition().getY() + 1;
+                LiftContents contents = lift.getContents();
+                contents.move(BlockFace.UP, diff, true);
+            }
+        }
     };
 
     /**
@@ -51,6 +66,19 @@ public abstract class SpecialBlock {
                 return new MoveResult(MoveResult.Type.CONTINUE);
             }
         }
+
+        @Override
+        public void plateTriggered(Lift lift, Block block) {
+            if (lift.getPosition().getY() > block.getY()) {
+                int diff = lift.getPosition().getY() - block.getY() - 1;
+                LiftContents contents = lift.getContents();
+                contents.move(BlockFace.DOWN, diff, true);
+            } else if (lift.getPosition().getY() < block.getY()) {
+                int diff = block.getY() - lift.getPosition().getY() + 1;
+                LiftContents contents = lift.getContents();
+                contents.move(BlockFace.UP, diff, true);
+            }
+        }
     };
 
     /**
@@ -63,6 +91,19 @@ public abstract class SpecialBlock {
                 return new MoveResult(MoveResult.Type.BLOCK);
             } else {
                 return new MoveResult(MoveResult.Type.CONTINUE);
+            }
+        }
+
+        @Override
+        public void plateTriggered(Lift lift, Block block) {
+            if (lift.getPosition().getY() > block.getY()) {
+                int diff = lift.getPosition().getY() - block.getY() - 1;
+                LiftContents contents = lift.getContents();
+                contents.move(BlockFace.DOWN, diff, true);
+            } else if (lift.getPosition().getY() < block.getY()) {
+                int diff = block.getY() - lift.getPosition().getY() + 1;
+                LiftContents contents = lift.getContents();
+                contents.move(BlockFace.UP, diff, true);
             }
         }
     };
@@ -85,6 +126,14 @@ public abstract class SpecialBlock {
     }
 
     public abstract MoveResult liftActed(Lift lift, LiftContents contents);
+
+    /**
+     * Called when a plate on top of {@code block} is triggered
+     *
+     * @param lift The nearest lift
+     * @param block The block that is of this special block type
+     */
+    public void plateTriggered(Lift lift, Block block) {}
 
     public static SpecialBlock byName(String name) {
         Validate.notNull(name);

@@ -51,8 +51,12 @@ public class Point implements ConfigurationSerializable {
         return new Point(this.x, this.y, z);
     }
 
+    public Point modify(BlockFace face, int count) {
+        return new Point(this.x + face.getModX() * count, this.y + face.getModY() * count, this.z + face.getModZ() * count);
+    }
+
     public Point modify(BlockFace face) {
-        return new Point(this.x + face.getModX(), this.y + face.getModY(), this.z + face.getModZ());
+        return modify(face, 1);
     }
 
     public Point add(int x, int y, int z) {

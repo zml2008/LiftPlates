@@ -2,10 +2,12 @@ package com.zachsthings.liftplates;
 
 import com.zachsthings.liftplates.util.BlockQueue;
 import com.zachsthings.liftplates.util.Point;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.material.Button;
 import org.bukkit.material.MaterialData;
@@ -45,13 +47,13 @@ public class LiftContents {
      *
      * Moves the lift in its default direction
      *
-     * @see #move(org.bukkit.block.BlockFace, boolean)
+     * @see #move(org.bukkit.block.BlockFace, int, boolean)
      * @param ignoreSpecialBlocks Whether special blocks should have an
      *     effect on the motion of the lift
      * @return Whether the motion was successful
      */
     public MoveResult move(boolean ignoreSpecialBlocks) {
-        return move(lift.getDirection().getFace(), ignoreSpecialBlocks);
+        return move(lift.getDirection().getFace(), 1, ignoreSpecialBlocks);
     }
 
     /**
@@ -63,7 +65,11 @@ public class LiftContents {
     }
 
     public MoveResult move(BlockFace face) {
-        return move(face, false);
+        return move(face, 1, false);
+    }
+
+    public MoveResult move(BlockFace face, int count) {
+        return move(face, count, false);
     }
 
     /**
@@ -73,7 +79,10 @@ public class LiftContents {
      * @return Whether the lift could be successfully moved.
      *      This will return false if the lift tries to move to an already occupied position.
      */
-    public MoveResult move(BlockFace direction, boolean ignoreSpecialBlocks) { // We might want to cache the data used in here for elevator trips. Will reduce server load
+    public MoveResult move(BlockFace direction, int iterations, boolean ignoreSpecialBlocks) { // We might want to cache the data used in here for elevator trips. Will reduce server load
+        if (iterations == 0) {
+            return new MoveResult(MoveResult.Type.STOP);
+        }
         MoveResult.Type type = MoveResult.Type.CONTINUE;
         int amount = 0;
         // Get blocks
@@ -105,7 +114,7 @@ public class LiftContents {
         // Move
         for (Point loc : getBlocks()) {
             Block oldBlock = loc.getBlock(lift.getManager().getWorld());
-            Point newLoc = loc.modify(direction);
+            Point newLoc = loc.modify(direction, iterations);
             Block newBlock = newLoc.getBlock(lift.getManager().getWorld());
 
             if (!newBlock.isEmpty() && !getBlocks().contains(newLoc)) {
@@ -128,14 +137,17 @@ public class LiftContents {
         for (Point loc : getBlocks()) {
             Lift testLift = lift.getManager().getLift(loc);
             if (testLift != null) {
-                testLift.setPosition(loc.modify(direction));
+                testLift.setPosition(loc.modify(direction, iterations));
             }
         }
 
         removeBlocks.apply();
         for (Entity entity : getEntities()) {
-            entity.teleport(entity.getLocation().add(direction.getModX(),
-                    direction.getModY(), direction.getModZ()), PlayerTeleportEvent.TeleportCause.PLUGIN);
+            Location newLocation = entity.getLocation().add(direction.getModX() * iterations, 0, direction.getModZ() * iterations);
+            if (!(entity instanceof LivingEntity) || direction.getModY() > 0 ) {
+                newLocation.add(0, direction.getModY() * iterations, 0);
+            }
+            entity.teleport(newLocation, PlayerTeleportEvent.TeleportCause.PLUGIN);
 
         }
 

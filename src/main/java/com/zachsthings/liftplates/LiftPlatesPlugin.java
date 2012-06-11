@@ -94,7 +94,7 @@ public class LiftPlatesPlugin extends JavaPlugin {
         Point point = new Point(loc);
         Lift lift = getLiftManager(loc.getWorld()).getLift(point);
         if (lift == null && nearby) {
-            return detectLift(loc.getWorld(), point, config.maxLiftSize * config.maxLiftSize, point, new ArrayList<Point>(10));
+            return detectLift(loc.getWorld(), point, (config.maxLiftSize + 1) * (config.maxLiftSize + 1), point, new ArrayList<Point>(10));
         }
         return lift;
     }
@@ -104,10 +104,39 @@ public class LiftPlatesPlugin extends JavaPlugin {
         if (orig.distanceSquared(loc) > maxDistSq) {
             return null;
         }
-
-        Lift lift = getLiftManager(world).getLift(loc);
+        LiftManager manager = getLiftManager(world);
+        Lift lift = manager.getLift(loc);
         if (lift != null) {
             return lift;
+        }
+
+        boolean lastChance = false;
+        for (int i = loc.getY(); i < world.getMaxHeight(); ++i) {
+            Point raisedPos = loc.setY(i);
+            lift = manager.getLift(raisedPos);
+            if (lift != null) {
+                return lift;
+            } else {
+                if (!raisedPos.getBlock(world).isEmpty()) {
+                    if (lastChance) {
+                        break;
+                    } else {
+                        lastChance = true;
+                    }
+                }
+            }
+        }
+
+        for (int i = loc.getY(); i >= 0; --i) {
+            Point loweredY = loc.setY(i);
+            lift = manager.getLift(loweredY);
+            if (lift != null) {
+                return lift;
+            } else {
+                if (!loweredY.getBlock(world).isEmpty()) {
+                    break;
+                }
+            }
         }
 
         visited.add(loc);
