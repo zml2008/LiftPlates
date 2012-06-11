@@ -1,7 +1,10 @@
 package com.zachsthings.liftplates;
 
+import com.zachsthings.liftplates.SpecialBlock;
 import com.zachsthings.liftplates.util.BlockQueue;
+import com.zachsthings.liftplates.util.IntPairKey;
 import com.zachsthings.liftplates.util.Point;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -13,6 +16,7 @@ import org.bukkit.material.Button;
 import org.bukkit.material.MaterialData;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -22,7 +26,7 @@ public class LiftContents {
     private final Lift lift;
     private final Set<SpecialBlock> specialBlocks;
     private final Set<Point> locations;
-    private final Set<Entity> entities;
+    private Set<Entity> entities;
 
     public LiftContents(Lift lift, Set<SpecialBlock> specialBlocks, Set<Point> locations, Set<Entity> entities) {
         this.lift = lift;
@@ -41,6 +45,23 @@ public class LiftContents {
 
     public Set<Entity> getEntities() {
         return entities;
+    }
+
+    public void update() {
+        Set<Entity> entities = new HashSet<Entity>();
+        Set<Long> chunks = new HashSet<Long>();
+        for (Point loc : locations) {
+            chunks.add(IntPairKey.key(loc.getX() >> 4, loc.getZ() >> 4));
+        }
+        for (long key : chunks) {
+            Chunk chunk = lift.getManager().getWorld().getChunkAt(IntPairKey.key1(key), IntPairKey.key2(key));
+            for (Entity entity : chunk.getEntities()) {
+                if (locations.contains(new Point(entity.getLocation()))) {
+                    entities.add(entity);
+                }
+            }
+        }
+        this.entities = Collections.unmodifiableSet(entities);
     }
 
     /**

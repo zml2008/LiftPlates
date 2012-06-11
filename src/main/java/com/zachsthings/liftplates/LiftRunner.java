@@ -1,5 +1,6 @@
 package com.zachsthings.liftplates;
 
+import com.zachsthings.liftplates.SpecialBlock;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -103,6 +104,8 @@ public class LiftRunner implements Runnable {
             LiftState state = entry.getValue();
             if (state.contents == null) {
                 state.contents = entry.getKey().getContents();
+            } else {
+                state.contents.update();
             }
             boolean hasPlayers = false;
             for (Entity entity : state.contents.getEntities()) {
