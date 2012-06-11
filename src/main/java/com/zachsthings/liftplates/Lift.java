@@ -1,6 +1,6 @@
 package com.zachsthings.liftplates;
 
-import com.zachsthings.liftplates.util.BlockQueue;
+import com.zachsthings.liftplates.specialblock.SpecialBlock;
 import com.zachsthings.liftplates.util.IntPairKey;
 import com.zachsthings.liftplates.util.Point;
 import org.apache.commons.lang.Validate;
@@ -12,9 +12,6 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.SerializableAs;
 import org.bukkit.entity.Entity;
-import org.bukkit.event.player.PlayerTeleportEvent;
-import org.bukkit.material.Button;
-import org.bukkit.material.MaterialData;
 
 import java.util.HashMap;
 import java.util.HashSet;

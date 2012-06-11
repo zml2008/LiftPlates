@@ -2,8 +2,12 @@ package com.zachsthings.liftplates;
 
 import com.zachsthings.liftplates.config.ConfigurationBase;
 import com.zachsthings.liftplates.config.Setting;
+import com.zachsthings.liftplates.specialblock.SpecialBlock;
+import com.zachsthings.liftplates.specialblock.SpecialBlockRegisterEvent;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,7 +17,7 @@ import java.util.Set;
 /**
  * @author zml2008
  */
-public class LiftPlatesConfig extends ConfigurationBase {
+public class LiftPlatesConfig extends ConfigurationBase implements Listener {
     /**
      * Whether to treat a bunch of pressure plate lifts next to each other
      * with the same base block type as the same lift
@@ -36,17 +40,18 @@ public class LiftPlatesConfig extends ConfigurationBase {
     @Setting("lift-height") public int liftHeight = 2;
 
     public Map<Material, SpecialBlock> specialBlocks = new HashMap<Material, SpecialBlock>();
+    Set<SpecialBlock> storedSpecialBlocks;
 
     public void load(ConfigurationSection section) {
         super.load(section);
 
-        Set<SpecialBlock> storedSpecialBlocks = new HashSet<SpecialBlock>();
+        storedSpecialBlocks = new HashSet<SpecialBlock>();
 
         for (Map.Entry<String, String> entry : rawSpecialBlocks.entrySet()) {
             SpecialBlock block = SpecialBlock.byName(entry.getKey());
-            Material mat = Material.matchMaterial(entry.getValue());
-            if (block != null && mat != null) {
-                specialBlocks.put(mat, block);
+            Material mat = entry.getValue() == null ? null : Material.matchMaterial(entry.getValue());
+            if (block != null) {
+                if (mat != null) specialBlocks.put(mat, block);
                 storedSpecialBlocks.add(block);
             }
         }
@@ -55,6 +60,7 @@ public class LiftPlatesConfig extends ConfigurationBase {
         for (SpecialBlock type : SpecialBlock.getAll()) {
             if (!storedSpecialBlocks.contains(type)) {
                 specialBlocks.put(type.getDefaultType(), type);
+                storedSpecialBlocks.add(type);
                 changed = true;
             }
         }

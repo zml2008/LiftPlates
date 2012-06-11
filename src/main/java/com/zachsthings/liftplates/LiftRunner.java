@@ -1,6 +1,6 @@
 package com.zachsthings.liftplates;
 
-import com.zachsthings.liftplates.SpecialBlock;
+import com.zachsthings.liftplates.specialblock.SpecialBlock;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;

@@ -1,5 +1,6 @@
 package com.zachsthings.liftplates;
 
+import com.zachsthings.liftplates.specialblock.SpecialBlockRegisterEvent;
 import com.zachsthings.liftplates.util.Point;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
@@ -67,5 +68,16 @@ public class LiftPlatesListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         plugin.getLiftRunner().clear(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onSpecialBlockRegister(SpecialBlockRegisterEvent event) {
+        LiftPlatesConfig config = plugin.getConfiguration();
+        if (!config.storedSpecialBlocks.contains(event.getRegisteredBlock())) {
+            config.specialBlocks.put(event.getRegisteredBlock().getDefaultType(), event.getRegisteredBlock());
+            config.storedSpecialBlocks.add(event.getRegisteredBlock());
+            config.save(plugin.getConfig());
+            plugin.saveConfig();
+        }
     }
 }

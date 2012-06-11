@@ -1,6 +1,6 @@
 package com.zachsthings.liftplates;
 
-import com.zachsthings.liftplates.SpecialBlock;
+import com.zachsthings.liftplates.specialblock.SpecialBlock;
 import com.zachsthings.liftplates.util.BlockQueue;
 import com.zachsthings.liftplates.util.IntPairKey;
 import com.zachsthings.liftplates.util.Point;
