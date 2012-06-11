@@ -66,6 +66,7 @@ public class LiftRunner implements Runnable {
     private static class LiftState {
         public int delay = 1;
         public boolean specialBlocksTriggered = true;
+        public LiftContents contents;
     }
 
     public void run() {
@@ -88,16 +89,10 @@ public class LiftRunner implements Runnable {
                     lift = plugin.detectLift(plateLoc, true);
                     if (lift != null) {
                         Block bukkitBlock = plateLoc.getBlock().getRelative(BlockFace.DOWN);
-                        System.out.println("Detected lift near to " + plateLoc);
                         SpecialBlock block = lift.getSpecialBlock(bukkitBlock.getType());
                         if (block != null) {
-                            System.out.println("Triggered " + block.getName() + " with a plate");
                             block.plateTriggered(lift, bukkitBlock);
-                        } else {
-                            System.out.println("Could not get special block for type " + plateLoc);
                         }
-                    } else {
-                        System.out.println("Could not detect lift near " + plateLoc);
                     }
                 }
             }
@@ -105,10 +100,12 @@ public class LiftRunner implements Runnable {
 
         for (Iterator<Map.Entry<Lift, LiftState>> i = movingLifts.entrySet().iterator(); i.hasNext();) {
             Map.Entry<Lift, LiftState> entry = i.next();
-            LiftContents contents = entry.getKey().getContents();
             LiftState state = entry.getValue();
+            if (state.contents == null) {
+                state.contents = entry.getKey().getContents();
+            }
             boolean hasPlayers = false;
-            for (Entity entity : contents.getEntities()) {
+            for (Entity entity : state.contents.getEntities()) {
                 if (entity instanceof Player) {
                     hasPlayers = true;
                     break;
@@ -120,7 +117,7 @@ public class LiftRunner implements Runnable {
                 continue;
             }
             if (--state.delay == 0) {
-                MoveResult result = contents.move(!state.specialBlocksTriggered);
+                MoveResult result = state.contents.move(!state.specialBlocksTriggered);
                 switch (result.getType()) {
                     case DELAY:
                         state.specialBlocksTriggered = false;
@@ -131,6 +128,7 @@ public class LiftRunner implements Runnable {
                         state.specialBlocksTriggered = true;
                         break;
                     case STOP:
+                        state.contents = null;
                         state.delay = -1;
                         state.specialBlocksTriggered = false;
                         break;
