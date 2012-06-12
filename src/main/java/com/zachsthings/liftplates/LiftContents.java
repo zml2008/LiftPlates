@@ -24,19 +24,26 @@ import java.util.Set;
  */
 public class LiftContents {
     private final Lift lift;
-    private final Set<SpecialBlock> specialBlocks;
-    private final Set<Point> locations;
+    private Set<SpecialBlock> specialBlocks;
+    private Set<Point> locations;
     private Set<Entity> entities;
+    private Set<Point> edgeBlocks;
 
-    public LiftContents(Lift lift, Set<SpecialBlock> specialBlocks, Set<Point> locations, Set<Entity> entities) {
+    public LiftContents(Lift lift, Set<Point> edgeBlocks, Set<Point> locations) {
         this.lift = lift;
-        this.specialBlocks = Collections.unmodifiableSet(specialBlocks);
+        this.edgeBlocks = Collections.unmodifiableSet(edgeBlocks);
         this.locations = Collections.unmodifiableSet(locations);
-        this.entities = Collections.unmodifiableSet(entities);
     }
 
     public Set<SpecialBlock> getSpecialBlocks() {
+        if (this.specialBlocks == null) {
+            update();
+        }
         return specialBlocks;
+    }
+
+    public Set<Point> getEdgeBlocks() {
+        return edgeBlocks;
     }
 
     public Set<Point> getBlocks() {
@@ -44,6 +51,9 @@ public class LiftContents {
     }
 
     public Set<Entity> getEntities() {
+        if (this.entities == null) {
+            update();
+        }
         return entities;
     }
 
@@ -62,6 +72,16 @@ public class LiftContents {
             }
         }
         this.entities = Collections.unmodifiableSet(entities);
+
+        Set<SpecialBlock> specialBlocks = new HashSet<SpecialBlock>();
+
+        for (Point loc : getEdgeBlocks()) {
+            SpecialBlock block = lift.getSpecialBlock(loc.getBlock(lift.getManager().getWorld()).getType());
+            if (block != null) {
+                specialBlocks.add(block);
+            }
+        }
+        this.specialBlocks = Collections.unmodifiableSet(specialBlocks);
     }
 
     /**
@@ -97,6 +117,9 @@ public class LiftContents {
      *      This will return false if the lift tries to move to an already occupied position.
      */
     public MoveResult move(BlockFace direction, boolean ignoreSpecialBlocks) { // We might want to cache the data used in here for elevator trips. Will reduce server load
+        if (this.entities == null) {
+            this.update();
+        }
         MoveResult.Type type = MoveResult.Type.CONTINUE;
         int amount = 0;
         // Get blocks
@@ -125,10 +148,13 @@ public class LiftContents {
             }
         }
 
+        Set<Point> locations = new HashSet<Point>();
+
         // Move
         for (Point loc : getBlocks()) {
             Block oldBlock = loc.getBlock(lift.getManager().getWorld());
             Point newLoc = loc.modify(direction);
+            locations.add(newLoc);
             Block newBlock = newLoc.getBlock(lift.getManager().getWorld());
 
             if (!newBlock.isEmpty() && !getBlocks().contains(newLoc)) {
@@ -168,6 +194,13 @@ public class LiftContents {
         addBlocks.apply();
         lift.getManager().updateLiftLocations();
 
-        return new MoveResult(MoveResult.Type.CONTINUE);
+        this.locations = Collections.unmodifiableSet(locations);
+        Set<Point> edgeBlocks = new HashSet<Point>();
+        for (Point edgeBlock : getEdgeBlocks()) {
+            edgeBlocks.add(edgeBlock.modify(direction));
+        }
+        this.edgeBlocks = Collections.unmodifiableSet(edgeBlocks);
+
+        return new MoveResult(type, amount);
     }
 }

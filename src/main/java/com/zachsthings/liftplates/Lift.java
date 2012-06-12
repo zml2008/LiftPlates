@@ -112,8 +112,6 @@ public class Lift implements ConfigurationSerializable {
         return this.manager;
     }
 
-    // -- Motion methods
-
     /**
      * Return the blocks that will be moved with this elevator
      *
@@ -121,27 +119,11 @@ public class Lift implements ConfigurationSerializable {
      */
     public LiftContents getContents() {
         Set<Point> blocks = new HashSet<Point>();
-        Set<SpecialBlock> specialBlocks = new HashSet<SpecialBlock>();
+        Set<Point> edgeBlocks = new HashSet<Point>();
         Point location = position.setY(position.getY() - 1);
-        travelBlocks(location, location, blocks, new HashSet<Point>(), specialBlocks);
+        travelBlocks(location, location, blocks, new HashSet<Point>(), edgeBlocks);
 
-        Set<Entity> entities = new HashSet<Entity>();
-        Set<Long> chunks = new HashSet<Long>();
-        for (Point loc : blocks) {
-            chunks.add(IntPairKey.key(loc.getX() >> 4, loc.getZ() >> 4));
-        }
-
-        for (long chunkCoord : chunks) {
-            Chunk chunk = manager.getWorld().getChunkAt(IntPairKey.key1(chunkCoord), IntPairKey.key2(chunkCoord));
-            for (Entity entity : chunk.getEntities()) {
-                Location entLoc = entity.getLocation();
-                if (blocks.contains(new Point(entLoc))) {
-                    entities.add(entity);
-                }
-            }
-        }
-
-        return new LiftContents(this, specialBlocks, blocks, entities);
+        return new LiftContents(this, edgeBlocks, blocks);
     }
 
     /**
@@ -162,16 +144,13 @@ public class Lift implements ConfigurationSerializable {
      * @param validLocations The list of already travelled and valid locations
      * @param visited The list of already travelled (not necessarily valid) locations
      */
-    private void travelBlocks(Point start, Point current, Set<Point> validLocations, Set<Point> visited, Set<SpecialBlock> specialBlocks) {
+    private void travelBlocks(Point start, Point current, Set<Point> validLocations, Set<Point> visited, Set<Point> edgeBlocks) {
         visited.add(current);
 
         LiftPlatesConfig config = manager.getPlugin().getConfiguration();
         final int maxDist = config.maxLiftSize * config.maxLiftSize;
         if (start.distanceSquared(current) > maxDist) { // Too far away
-            SpecialBlock block = getSpecialBlock(current.getBlock(manager.getWorld()).getType());
-            if (block != null) {
-                specialBlocks.add(block);
-            }
+            edgeBlocks.add(current);
             return;
         }
 
@@ -179,19 +158,13 @@ public class Lift implements ConfigurationSerializable {
         Block startBlock = start.getBlock(manager.getWorld());
         if (currentBlock.getTypeId() != startBlock.getTypeId()
                 || currentBlock.getData() != startBlock.getData()) { // Different block type
-            SpecialBlock block = getSpecialBlock(currentBlock.getType());
-            if (block != null) {
-                specialBlocks.add(block);
-            }
+            edgeBlocks.add(current);
             return;
         }
 
         if (!config.recursiveLifts
                 && !LiftUtil.isPressurePlate(current.modify(BlockFace.UP).getBlock(manager.getWorld()).getType())) { // Not a pressure plate
-            SpecialBlock block = getSpecialBlock(currentBlock.getType());
-            if (block != null) {
-                specialBlocks.add(block);
-            }
+            edgeBlocks.add(current);
             return;
         }
 
@@ -207,7 +180,7 @@ public class Lift implements ConfigurationSerializable {
                 continue;
             }
 
-            travelBlocks(start, newLoc, validLocations, visited, specialBlocks);
+            travelBlocks(start, newLoc, validLocations, visited, edgeBlocks);
         }
     }
 

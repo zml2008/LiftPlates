@@ -23,11 +23,11 @@ import java.util.UUID;
  * @author zml2008
  */
 public class LiftPlatesPlugin extends JavaPlugin {
-
     static {
         ConfigurationSerialization.registerClass(Lift.class);
         ConfigurationSerialization.registerClass(Point.class);
     }
+
     private LiftRunner liftRunner;
     private final Map<UUID, LiftManager> liftManagers = new HashMap<UUID, LiftManager>();
     private LiftPlatesConfig config = new LiftPlatesConfig();
