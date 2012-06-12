@@ -62,15 +62,9 @@ public class BlockQueue {
     }
 
     public void set(Point point, MaterialData mat) {
-        Block testBlock = point.getBlock(world);
-        if (testBlock.getTypeId() == mat.getItemTypeId()
-                && testBlock.getData() == mat.getData()) { // They're the same block, don't bother with a change
-            changesNormal.remove(point);
-            changesLast.remove(point);
-            return;
-        }
         MaterialData testMat = mat;
         if (mat.getItemType() == Material.AIR) {
+            Block testBlock = point.getBlock(world);
             testMat = testBlock.getType().getNewData(testBlock.getData());
         }
 
@@ -102,13 +96,21 @@ public class BlockQueue {
 
         for (Map.Entry<Point, MaterialData> entry : first) {
             MaterialData type = modifyMaterialData(entry.getValue());
-            entry.getKey().getBlock(world).setTypeIdAndData(type.getItemTypeId(),
+            Block target = entry.getKey().getBlock(world);
+            if (target.getType() == type.getItemType() && target.getData() == type.getData()) {
+                continue;
+            }
+            target.setTypeIdAndData(type.getItemTypeId(),
                     type.getData(), !setNoPhysics(type.getItemType()));
         }
 
         for (Map.Entry<Point, MaterialData> entry : second) {
             MaterialData type = modifyMaterialData(entry.getValue());
-            entry.getKey().getBlock(world).setTypeIdAndData(type.getItemTypeId(),
+            Block target = entry.getKey().getBlock(world);
+            if (target.getType() == type.getItemType() && target.getData() == type.getData()) {
+                continue;
+            }
+            target.setTypeIdAndData(type.getItemTypeId(),
                     type.getData(), !setNoPhysics(type.getItemType()));
         }
     }
