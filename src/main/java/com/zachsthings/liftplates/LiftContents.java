@@ -28,6 +28,7 @@ public class LiftContents {
     private Set<Point> locations;
     private Set<Entity> entities;
     private Set<Point> edgeBlocks;
+    private Set<Lift> lifts;
 
     public LiftContents(Lift lift, Set<Point> edgeBlocks, Set<Point> locations) {
         this.lift = lift;
@@ -48,6 +49,13 @@ public class LiftContents {
 
     public Set<Point> getBlocks() {
         return locations;
+    }
+
+    public Set<Lift> getLifts() {
+        if (this.lifts == null) {
+            update();
+        }
+        return this.lifts;
     }
 
     public Set<Entity> getEntities() {
@@ -82,6 +90,16 @@ public class LiftContents {
             }
         }
         this.specialBlocks = Collections.unmodifiableSet(specialBlocks);
+
+        Set<Lift> lifts = new HashSet<Lift>();
+        for (Point loc : getBlocks()) {
+            Lift testLift = lift.getManager().getLift(loc);
+            if (testLift != null) {
+                lifts.add(testLift);
+            }
+        }
+
+        this.lifts = Collections.unmodifiableSet(lifts);
     }
 
     /**
@@ -174,11 +192,8 @@ public class LiftContents {
         // Update the location of any lifts in the moving blocks
         // TODO: Update tile entity data (needs n.m.s code) and call LiftMoveEvent to allow other plugins to move their objects
         // This will need a more complete object to store block data (old location, new location, type, data, tile entity data)
-        for (Point loc : getBlocks()) {
-            Lift testLift = lift.getManager().getLift(loc);
-            if (testLift != null) {
-                testLift.setPosition(loc.modify(direction));
-            }
+        for (Lift lift : getLifts()) {
+            lift.setPosition(lift.getPosition().modify(direction));
         }
 
         removeBlocks.apply();
