@@ -1,5 +1,6 @@
 package com.zachsthings.liftplates.util;
 
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -15,7 +16,7 @@ import java.util.Map;
  */
 @SerializableAs("Point")
 public class Point implements ConfigurationSerializable {
-    private final int x, y, z;
+    protected final int x, y, z;
 
     public Point(int x, int y, int z) {
         this.x = x;
@@ -73,6 +74,10 @@ public class Point implements ConfigurationSerializable {
 
     public Block getBlock(World world) {
         return world.getBlockAt(this.x, this.y, this.z);
+    }
+
+    public Chunk getChunk(World world) {
+        return world.getChunkAt(this.x >> 4, this.z >> 4);
     }
 
     public boolean equals(Object obj) {

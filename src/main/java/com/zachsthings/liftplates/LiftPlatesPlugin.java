@@ -4,6 +4,7 @@ import com.zachsthings.liftplates.commands.LiftCreationCommand;
 import com.zachsthings.liftplates.commands.LiftPlatesCommands;
 import com.zachsthings.liftplates.commands.ListLiftsCommand;
 import com.zachsthings.liftplates.util.Point;
+import com.zachsthings.liftplates.util.WorldPoint;
 import org.apache.commons.lang.Validate;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -26,6 +27,7 @@ public class LiftPlatesPlugin extends JavaPlugin {
     static {
         ConfigurationSerialization.registerClass(Lift.class);
         ConfigurationSerialization.registerClass(Point.class);
+        ConfigurationSerialization.registerClass(WorldPoint.class);
     }
 
     private LiftRunner liftRunner;
@@ -89,35 +91,35 @@ public class LiftPlatesPlugin extends JavaPlugin {
         return manager;
     }
 
-    public Lift detectLift(Location loc, boolean nearby) {
+    public Lift detectLift(WorldPoint loc, boolean nearby) {
         Validate.notNull(loc);
-        Point point = new Point(loc);
-        Lift lift = getLiftManager(loc.getWorld()).getLift(point);
+        Point pointLoc = loc.toPoint();
+        Lift lift = getLiftManager(loc.getWorld()).getLift(pointLoc);
         if (lift == null && nearby) {
-            return detectLift(loc.getWorld(), point, (config.maxLiftSize + 1) * (config.maxLiftSize + 1), point, new ArrayList<Point>(10));
+            return detectLift(loc, (config.maxLiftSize + 1) * (config.maxLiftSize + 1), pointLoc, new ArrayList<Point>(10));
         }
         return lift;
     }
 
 
-    private Lift detectLift(World world, Point orig, int maxDistSq, Point loc, List<Point> visited) {
+    private Lift detectLift(WorldPoint orig, int maxDistSq, Point loc, List<Point> visited) {
         if (orig.distanceSquared(loc) > maxDistSq) {
             return null;
         }
-        LiftManager manager = getLiftManager(world);
+        LiftManager manager = getLiftManager(orig.getWorld());
         Lift lift = manager.getLift(loc);
         if (lift != null) {
             return lift;
         }
 
         boolean lastChance = false;
-        for (int i = loc.getY(); i < world.getMaxHeight(); ++i) {
+        for (int i = loc.getY(); i < orig.getWorld().getMaxHeight(); ++i) {
             Point raisedPos = loc.setY(i);
             lift = manager.getLift(raisedPos);
             if (lift != null) {
                 return lift;
             } else {
-                if (!raisedPos.getBlock(world).isEmpty()) {
+                if (!raisedPos.getBlock(orig.getWorld()).isEmpty()) {
                     if (lastChance) {
                         break;
                     } else {
@@ -133,7 +135,7 @@ public class LiftPlatesPlugin extends JavaPlugin {
             if (lift != null) {
                 return lift;
             } else {
-                if (!loweredY.getBlock(world).isEmpty()) {
+                if (!loweredY.getBlock(orig.getWorld()).isEmpty()) {
                     break;
                 }
             }
@@ -146,7 +148,7 @@ public class LiftPlatesPlugin extends JavaPlugin {
                 continue;
             }
 
-            lift = detectLift(world, orig, maxDistSq, newLoc, visited);
+            lift = detectLift(orig, maxDistSq, newLoc, visited);
             if (lift != null) {
                 return lift;
             }

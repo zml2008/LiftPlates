@@ -2,6 +2,7 @@ package com.zachsthings.liftplates;
 
 import com.zachsthings.liftplates.specialblock.SpecialBlockRegisterEvent;
 import com.zachsthings.liftplates.util.Point;
+import com.zachsthings.liftplates.util.WorldPoint;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
@@ -10,6 +11,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockRedstoneEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -31,9 +33,6 @@ public class LiftPlatesListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onPressPlate(PlayerInteractEvent event) {
         switch (event.getAction()) {
-            case PHYSICAL:
-                plugin.getLiftRunner().getState(event.getPlayer()).triggeredPlate();
-                break;
             case LEFT_CLICK_BLOCK:
                 BlockState state = event.getClickedBlock().getState();
                 if (state instanceof Sign) {
@@ -51,23 +50,19 @@ public class LiftPlatesListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         final Location block = event.getBlock().getLocation();
-        if (LiftUtil.isPressurePlate(event.getBlock().getType())) {
+        if (plugin.getLiftManager(block.getWorld()).getLift(block) != null) {
             plugin.getLiftManager(block.getWorld()).removeLift(new Point(block));
         } else {
             final Location above = LiftUtil.mod(block, BlockFace.UP);
             plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
                 public void run() {
-                    if (!LiftUtil.isPressurePlate(above.getBlock().getType())) {
-                        plugin.getLiftManager(block.getWorld()).removeLift(new Point(above));
+                    if (above.getBlock().isEmpty() &&
+                            plugin.getLiftManager(above.getWorld()).getLift(above) != null) {
+                        plugin.getLiftManager(above.getWorld()).removeLift(new Point(above));
                     }
                 }
             }, 1L);
         }
-    }
-
-    @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
-        plugin.getLiftRunner().clear(event.getPlayer());
     }
 
     @EventHandler
@@ -78,6 +73,15 @@ public class LiftPlatesListener implements Listener {
             config.storedSpecialBlocks.add(event.getRegisteredBlock());
             config.save(plugin.getConfig());
             plugin.saveConfig();
+        }
+    }
+
+    @EventHandler
+    public void onPlateToggle(BlockRedstoneEvent event) {
+        if (LiftUtil.isPressurePlate(event.getBlock().getType())) {
+            if (event.getNewCurrent() > 0) { // Turning on
+                plugin.getLiftRunner().plateTriggered(new WorldPoint(event.getBlock().getLocation()));
+            }
         }
     }
 }
