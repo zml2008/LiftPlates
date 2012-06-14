@@ -112,6 +112,10 @@ public class Lift implements ConfigurationSerializable {
         return this.manager;
     }
 
+    public LiftPlatesPlugin getPlugin() {
+        return getManager().getPlugin();
+    }
+
     /**
      * Return the blocks that will be moved with this elevator
      *

@@ -26,6 +26,48 @@ public class LiftRunner implements Runnable {
         triggeredPoints.add(loc);
     }
 
+    /**
+     * Returns whether a lift or any attached lifts are running
+     *
+     * @param lift The lift to check
+     * @return Whether any of the involved lifts are running
+     */
+    public boolean isLiftRunning(Lift lift) {
+        LiftState state = movingLifts.get(lift);
+        LiftContents contents = null;
+        if (state != null) {
+           contents = state.contents;
+        }
+        if (contents == null) {
+            contents = lift.getContents();
+        }
+        for (Lift testLift : contents.getLifts()) {
+            if (movingLifts.containsKey(testLift)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Stop a lift and any attached lifts
+     *
+     * @param lift The lift to get contents from for stopping
+     */
+    public void stopLift(Lift lift) {
+        LiftState state = movingLifts.get(lift);
+        LiftContents contents = null;
+        if (state != null) {
+            contents = state.contents;
+        }
+        if (contents == null) {
+            contents = lift.getContents();
+        }
+        for (Lift testLift : contents.getLifts()) {
+            movingLifts.remove(testLift);
+        }
+    }
+
     private static class LiftState {
         public int delay = 1;
         public boolean specialBlocksTriggered = true;
@@ -66,30 +108,50 @@ public class LiftRunner implements Runnable {
             }
             i.remove();
         }
+        final Set<Lift> toRemove = new HashSet<Lift>();
 
         for (Iterator<Map.Entry<Lift, LiftState>> i = movingLifts.entrySet().iterator(); i.hasNext();) {
             Map.Entry<Lift, LiftState> entry = i.next();
+            if (toRemove.contains(entry.getKey())) {
+                i.remove();
+                continue;
+            }
             LiftState state = entry.getValue();
             if (state.contents == null) {
                 state.contents = entry.getKey().getContents();
             } else {
                 state.contents.update();
             }
-                boolean hasPlayers = false;
-                for (Entity entity : state.contents.getEntities()) {
-                    if (entity instanceof Player) {
-                        hasPlayers = true;
-                        break;
+
+            boolean hasPlayers = false;
+            for (Entity entity : state.contents.getEntities()) {
+                if (entity instanceof Player) {
+                    hasPlayers = true;
+                    break;
+                }
+            }
+
+            if (!hasPlayers && state.playerCaused) {
+                i.remove();
+                continue;
+            } else {
+                state.playerCaused = hasPlayers;
+            }
+
+            if (state.delay > 0 && --state.delay == 0) {
+                boolean removing = false;
+                for (Lift lift : state.contents.getLifts()) {
+                    if (lift != entry.getKey() && movingLifts.containsKey(lift)) {
+                        toRemove.add(lift);
+                        removing = true;
                     }
                 }
 
-                if (!hasPlayers && state.playerCaused) {
+                if (removing) {
                     i.remove();
                     continue;
-                } else {
-                    state.playerCaused = hasPlayers;
                 }
-            if (--state.delay == 0) {
+
                 MoveResult result = state.contents.move(!state.specialBlocksTriggered);
                 switch (result.getType()) {
                     case DELAY:
@@ -112,6 +174,8 @@ public class LiftRunner implements Runnable {
             }
         }
 
-
+        for (Lift lift : toRemove) {
+            movingLifts.remove(lift);
+        }
     }
 }

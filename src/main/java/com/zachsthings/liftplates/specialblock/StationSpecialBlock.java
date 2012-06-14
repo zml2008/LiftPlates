@@ -2,6 +2,7 @@ package com.zachsthings.liftplates.specialblock;
 
 import com.zachsthings.liftplates.Lift;
 import com.zachsthings.liftplates.LiftContents;
+import com.zachsthings.liftplates.LiftRunner;
 import com.zachsthings.liftplates.MoveResult;
 import com.zachsthings.liftplates.util.Point;
 import org.bukkit.Bukkit;
@@ -37,20 +38,21 @@ public class StationSpecialBlock extends SpecialBlock {
             CallLift call = new CallLift(block, lift);
             call.taskId = Bukkit.getServer().getScheduler().scheduleSyncRepeatingTask(
                     Bukkit.getServer().getPluginManager().getPlugin("LiftPlates"),
-                    call, 0, CallLift.RUN_FREQUENCY);
+                    call, 0, LiftRunner.RUN_FREQUENCY);
         }
     }
 
     private class CallLift implements Runnable {
-        public static final long RUN_FREQUENCY = 2;
         private int taskId;
         private final BlockFace direction;
         private final Block target;
+        private final Lift lift;
         private Point nearestLiftBlock;
         private LiftContents contents;
 
         public CallLift(Block target, Lift lift) {
             this.target = target;
+            this.lift = lift;
             this.contents = lift.getContents();
 
             Point blockLoc = new Point(target.getLocation());
@@ -104,6 +106,7 @@ public class StationSpecialBlock extends SpecialBlock {
         }
 
         public void run() {
+            lift.getPlugin().getLiftRunner().stopLift(lift);
             nearestLiftBlock = nearestLiftBlock.modify(direction);
             contents.update();
             MoveResult result = contents.move(direction, true);
