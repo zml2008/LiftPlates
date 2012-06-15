@@ -13,7 +13,7 @@ import java.util.*;
  * @author zml2008
  */
 public class LiftRunner implements Runnable {
-    public static final long RUN_FREQUENCY = 10;
+    public static final long RUN_FREQUENCY = 5;
     private final LiftPlatesPlugin plugin;
     private final Map<Lift, LiftState> movingLifts = new HashMap<Lift, LiftState>();
     private Set<WorldPoint> triggeredPoints = new LinkedHashSet<WorldPoint>();
