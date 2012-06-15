@@ -8,10 +8,14 @@ commands:
         aliases: ["lp", "liftpl"]
         description: "Base command for ${project.name}"
         usage: "/<command> <version|reload>"
-    "lift":
-        aliases: ["mklift", "createlift"]
+    "mklift":
+        aliases: ["addlift", "createlift"]
         description: "Create a new lift"
-        usage: "/<command> <up|down> [location]"
+        usage: "/<command> [location] <up|down>"
+    "islift":
+        aliases: ["liftexists", "haslift"]
+        description: "Shows whether a certain point has a lift"
+        usage: "/<command> <location>"
     "lslifts":
         description: "List the lifts in <world>"
         usage: "/<command> [world]"

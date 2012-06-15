@@ -1,9 +1,14 @@
 package com.zachsthings.liftplates;
 
 import com.zachsthings.liftplates.util.Point;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.BlockFace;
+import org.bukkit.command.CommandException;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 
@@ -36,21 +41,43 @@ public final class LiftUtil {
                 || mat == Material.WOOD_PLATE;
     }
 
-    /**
-     * A {@link Comparator} instance that compares objects by their height
-     */
-    public static final Comparator<Point> POINT_Y_COMPARE = new Comparator<Point>() {
-        public int compare(Point a, Point b) {
-            return a.getY() - b.getY();
+    public static Location matchLocation(CommandSender sender, String testString) throws CommandException {
+        if (sender instanceof Player) {
+            Player player = (Player) sender;
+            if (testString.equalsIgnoreCase("target")) {
+                return player.getTargetBlock(null, 300).getLocation();
+            } else if (testString.equalsIgnoreCase("pos")
+                    || testString.equalsIgnoreCase("cur")
+                    || testString.equalsIgnoreCase("current")) {
+                return player.getLocation();
+            }
         }
-    };
+        String[] worldSplit = testString.split(":");
+        World world;
+        if (worldSplit.length == 1) {
+            if (!(sender instanceof Player)) {
+                throw new CommandException("No player or world provided for location!");
+            }
+            world = ((Player) sender).getWorld();
+        } else {
+            world = Bukkit.getServer().getWorld(worldSplit[0]);
+            if (world == null) {
+                throw new CommandException("Unknown world specified: " + worldSplit[0]);
+            }
+        }
 
-    /**
-     * A {@link Comparator} instance that compares objects by their height
-     */
-    public static final Comparator<Point> POINT_Y_COMPARE_REVERSE = new Comparator<Point>() {
-        public int compare(Point a, Point b) {
-            return b.getY() - a.getY();
+        String[] pointSplit = worldSplit[worldSplit.length - 1].split(",");
+        if (pointSplit.length != 3) {
+            throw new CommandException("The third dimension, do you get it? Three points are required to specify a location");
         }
-    };
+        int x = Integer.parseInt(pointSplit[0]);
+        int y = Integer.parseInt(pointSplit[1]);
+        int z = Integer.parseInt(pointSplit[2]);
+        return new Location(world, x, y, z);
+
+    }
+
+    public static String toPrettyString(Point loc) {
+        return "(" + loc.getX() + ", " + loc.getY() + ", " + loc.getZ() + ")";
+    }
 }

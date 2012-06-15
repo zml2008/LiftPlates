@@ -1,5 +1,6 @@
 package com.zachsthings.liftplates;
 
+import com.zachsthings.liftplates.commands.IsLiftCommand;
 import com.zachsthings.liftplates.commands.LiftCreationCommand;
 import com.zachsthings.liftplates.commands.LiftPlatesCommands;
 import com.zachsthings.liftplates.commands.ListLiftsCommand;
@@ -42,7 +43,8 @@ public class LiftPlatesPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new LiftPlatesListener(this), this);
 
         safeSetExecutor("liftplates", new LiftPlatesCommands(this));
-        safeSetExecutor("lift", new LiftCreationCommand(this));
+        safeSetExecutor("mklift", new LiftCreationCommand(this));
+        safeSetExecutor("islift", new IsLiftCommand(this));
         safeSetExecutor("lslifts", new ListLiftsCommand(this));
 
         liftRunner = new LiftRunner(this);

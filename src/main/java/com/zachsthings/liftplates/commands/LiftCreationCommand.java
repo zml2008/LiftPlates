@@ -2,10 +2,10 @@ package com.zachsthings.liftplates.commands;
 
 import com.zachsthings.liftplates.Lift;
 import com.zachsthings.liftplates.LiftPlatesPlugin;
+import com.zachsthings.liftplates.LiftUtil;
 import com.zachsthings.liftplates.util.Point;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandException;
 import org.bukkit.command.CommandSender;
@@ -24,20 +24,20 @@ public class LiftCreationCommand extends ChildrenCommandExecutor {
     @Override
     protected boolean execute(CommandSender sender, Command command, String[] arguments) throws CommandException {
         if (arguments.length < 1) {
-            throw new CommandException("Not enough arguments! Usage: /" + command.getName() + " <up|down> [pos]");
+            throw new CommandException("Not enough arguments! Usage: /" + command.getName() + " [location] <up|down>");
         }
         if (arguments.length > 2) {
-            throw new CommandException("Too many arguments! Usage: /" + command.getName() + " <up|down> [pos]");
+            throw new CommandException("Too many arguments! Usage: /" + command.getName() + " [location] <up|down>");
         }
         Lift.Direction direction;
         try {
-            direction = Lift.Direction.valueOf(arguments[0].toUpperCase());
+            direction = Lift.Direction.valueOf(arguments[arguments.length - 1].toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new CommandException("Unknown direction: " + arguments[0]);
+            throw new CommandException("Unknown direction: " + arguments[arguments.length - 1]);
         }
         Location loc;
         if (arguments.length > 1) {
-            loc = matchLocation(sender, arguments[1]);
+            loc = LiftUtil.matchLocation(sender, arguments[0]);
         } else if (sender instanceof Player) {
             loc = ((Player) sender).getLocation();
         } else {
@@ -53,42 +53,6 @@ public class LiftCreationCommand extends ChildrenCommandExecutor {
 
         sender.sendMessage(ChatColor.BLUE + "Lift successfully created!");
         return true;
-    }
-
-    private Location matchLocation(CommandSender sender, String testString) throws CommandException {
-        if (sender instanceof Player) {
-            Player player = (Player) sender;
-            if (testString.equalsIgnoreCase("target")) {
-                return player.getTargetBlock(null, 300).getLocation();
-            } else if (testString.equalsIgnoreCase("pos")
-                    || testString.equalsIgnoreCase("cur")
-                    || testString.equalsIgnoreCase("current")) {
-                return player.getLocation();
-            }
-        }
-        String[] worldSplit = testString.split(":");
-        World world;
-        if (worldSplit.length == 1) {
-            if (!(sender instanceof Player)) {
-                throw new CommandException("No player or world provided for location!");
-            }
-            world = ((Player) sender).getWorld();
-        } else {
-            world = plugin.getServer().getWorld(worldSplit[0]);
-            if (world == null) {
-                throw new CommandException("Unknown world specified: " + worldSplit[0]);
-            }
-        }
-
-        String[] pointSplit = worldSplit[worldSplit.length - 1].split(",");
-        if (pointSplit.length != 3) {
-            throw new CommandException("The third dimension, do you get it? Three points are required to specify a location");
-        }
-        int x = Integer.parseInt(pointSplit[0]);
-        int y = Integer.parseInt(pointSplit[1]);
-        int z = Integer.parseInt(pointSplit[2]);
-        return new Location(world, x, y, z);
-
     }
 
 }
