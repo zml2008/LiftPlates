@@ -48,12 +48,11 @@ public class StationSpecialBlock extends SpecialBlock {
         private final Block target;
         private final Lift lift;
         private Point nearestLiftBlock;
-        private LiftContents contents;
 
         public CallLift(Block target, Lift lift) {
             this.target = target;
             this.lift = lift;
-            this.contents = lift.getContents();
+            LiftContents contents = lift.getContents();
 
             Point blockLoc = new Point(target.getLocation());
             final int requiredY = lift.getPosition().getY() - 1;
@@ -107,12 +106,30 @@ public class StationSpecialBlock extends SpecialBlock {
 
         public void run() {
             lift.getPlugin().getLiftRunner().stopLift(lift);
-            nearestLiftBlock = nearestLiftBlock.modify(direction);
+            final Point blockLoc = new Point(target.getLocation());
+            LiftContents contents = lift.getContents();
+            final int requiredY = lift.getPosition().getY() - 1;
+            Point nearestLoc = null;
+            int distance = Integer.MAX_VALUE;
+
+            for (Point loc : contents.getBlocks()) {
+                if (loc.getY() == requiredY) {
+                    if (loc.distanceSquared(blockLoc) < distance) {
+                        nearestLoc = loc;
+                    }
+                }
+            }
+
+            if (nearestLoc == null) {
+                throw new IllegalStateException("No nearest location found from the lift!");
+            }
+
+            this.nearestLiftBlock = nearestLoc;
             contents.update();
             MoveResult result = contents.move(direction, true);
-            final int dx = (nearestLiftBlock.getX() - target.getX()) * direction.getModX(),
-                    dy = (nearestLiftBlock.getY() - target.getY()) * direction.getModY(),
-                    dz = (nearestLiftBlock.getZ() - target.getZ()) * direction.getModZ();
+            final int dx = (nearestLiftBlock.getX() - blockLoc.getX()) * direction.getModX(),
+                    dy = (nearestLiftBlock.getY() - blockLoc.getY()) * direction.getModY(),
+                    dz = (nearestLiftBlock.getZ() - blockLoc.getZ()) * direction.getModZ();
             if (result.getType() == MoveResult.Type.STOP
                     || result.getType() == MoveResult.Type.BLOCK
                     || (dx == 0 && dy == 0 && dz == 0)) {
