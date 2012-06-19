@@ -125,14 +125,15 @@ public class StationSpecialBlock extends SpecialBlock {
             }
 
             this.nearestLiftBlock = nearestLoc;
-            contents.update();
-            MoveResult result = contents.move(direction, true);
             final int dx = (nearestLiftBlock.getX() - blockLoc.getX()) * direction.getModX(),
                     dy = (nearestLiftBlock.getY() - blockLoc.getY()) * direction.getModY(),
                     dz = (nearestLiftBlock.getZ() - blockLoc.getZ()) * direction.getModZ();
+
+            contents.update();
+            MoveResult result = (dx == 0 && dy == 0 && dz == 0) ? new MoveResult(MoveResult.Type.STOP) :
+                    contents.move(direction, true);
             if (result.getType() == MoveResult.Type.STOP
-                    || result.getType() == MoveResult.Type.BLOCK
-                    || (dx == 0 && dy == 0 && dz == 0)) {
+                    || result.getType() == MoveResult.Type.BLOCK) {
                 Bukkit.getServer().getScheduler().cancelTask(taskId);
                 activeBlocks.remove(target);
             }
