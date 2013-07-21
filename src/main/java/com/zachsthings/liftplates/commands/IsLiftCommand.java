@@ -30,7 +30,7 @@ public class IsLiftCommand extends ChildrenCommandExecutor {
             throw new CommandException("There is no lift at the specified location!");
         } else {
             sender.sendMessage(ChatColor.BLUE + "There is a lift at "
-                    + LiftUtil.toPrettyString(lift.getPosition()) + " moving " + lift.getDirection());
+                    + lift.getPosition() + " moving " + lift.getDirection());
         }
         return true;
     }

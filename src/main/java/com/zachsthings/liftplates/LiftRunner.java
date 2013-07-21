@@ -7,7 +7,13 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+
 
 /**
  * @author zml2008
@@ -83,7 +89,7 @@ public class LiftRunner implements Runnable {
                 continue;
             }
             Lift lift = plugin.getLiftManager(point.getWorld()).getLift(point.toPoint());
-            if (lift != null) {
+            if (lift != null) { // Lift plate
                 if (!movingLifts.containsKey(lift)) {
                     LiftState liftState = new LiftState();
                     movingLifts.put(lift, liftState);
@@ -93,7 +99,7 @@ public class LiftRunner implements Runnable {
                         liftState.delay = 1;
                     }
                 }
-            } else {
+            } else { // Special block controller plate
                 lift = plugin.detectLift(point, true);
                 if (lift != null) {
                     Block bukkitBlock = point.getBlock().getRelative(BlockFace.DOWN);

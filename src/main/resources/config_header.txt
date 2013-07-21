@@ -1,0 +1,7 @@
+# This is the configuration for ${project.name}. It can be edited by hand,
+# but remember that it is loaded and saved at each plugin run, so if there are any errors
+# in your configuration it will be reset to default.
+#
+# REMEMBER TO USE SPACES, NOT TABS, WHEN EDITING THIS CONFIGURATION
+# Bukkit's configuration system does not like tabs, and they are the most common
+# cause of error with configurations

@@ -3,10 +3,8 @@ package com.zachsthings.liftplates;
 import com.zachsthings.liftplates.config.ConfigurationBase;
 import com.zachsthings.liftplates.config.Setting;
 import com.zachsthings.liftplates.specialblock.SpecialBlock;
-import com.zachsthings.liftplates.specialblock.SpecialBlockRegisterEvent;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
 import java.util.HashMap;

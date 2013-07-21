@@ -7,7 +7,6 @@ import com.zachsthings.liftplates.commands.ListLiftsCommand;
 import com.zachsthings.liftplates.util.Point;
 import com.zachsthings.liftplates.util.WorldPoint;
 import org.apache.commons.lang.Validate;
-import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.CommandExecutor;
@@ -81,6 +80,14 @@ public class LiftPlatesPlugin extends JavaPlugin {
     public LiftPlatesConfig getConfiguration() {
         return config;
     }
+
+	@Override
+	public void saveConfig() {
+		if (this.config != null) {
+			this.config.save(getConfig());
+		}
+		super.saveConfig();
+	}
 
     public LiftManager getLiftManager(World world) {
         Validate.notNull(world);

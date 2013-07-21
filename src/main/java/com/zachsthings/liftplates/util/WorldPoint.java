@@ -5,7 +5,6 @@ import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 
 import java.util.Map;
 import java.util.UUID;
@@ -23,22 +22,6 @@ public class WorldPoint extends Point {
     public WorldPoint(Location loc) {
         super(loc);
         this.world = loc.getWorld();
-    }
-
-    public WorldPoint setX(int x) {
-        return new WorldPoint(this.world, x, this.y, this.z);
-    }
-
-    public Point setY(int y) {
-        return new WorldPoint(this.world, this.x, y, this.z);
-    }
-
-    public Point setZ(int z) {
-        return new WorldPoint(this.world, this.x, this.y, z);
-    }
-
-    public Point modify(BlockFace face, int count) {
-        return new WorldPoint(this.world, this.x + face.getModX() * count, this.y + face.getModY() * count, this.z + face.getModZ() * count);
     }
 
     public Block getBlock() {
@@ -64,6 +47,11 @@ public class WorldPoint extends Point {
     public Point setWorld(World world) {
         return new WorldPoint(world, getY(), getY(), getZ());
     }
+
+	@Override
+	protected WorldPoint modified(int x, int y, int z) {
+		return new WorldPoint(world, x, y, z);
+	}
 
     @Override
     public Map<String, Object> serialize() {

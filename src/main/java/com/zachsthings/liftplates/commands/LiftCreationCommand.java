@@ -29,6 +29,7 @@ public class LiftCreationCommand extends ChildrenCommandExecutor {
         if (arguments.length > 2) {
             throw new CommandException("Too many arguments! Usage: /" + command.getName() + " [location] <up|down>");
         }
+
         Lift.Direction direction;
         try {
             direction = Lift.Direction.valueOf(arguments[arguments.length - 1].toUpperCase());

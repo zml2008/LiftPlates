@@ -3,7 +3,6 @@ package com.zachsthings.liftplates.commands;
 import com.zachsthings.liftplates.Lift;
 import com.zachsthings.liftplates.LiftManager;
 import com.zachsthings.liftplates.LiftPlatesPlugin;
-import com.zachsthings.liftplates.LiftUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -35,7 +34,7 @@ public class ListLiftsCommand extends ChildrenCommandExecutor {
         LiftManager manager = plugin.getLiftManager(world);
         for (Lift lift : manager.getLifts()) {
             sender.sendMessage(ChatColor.BLUE + "Lift at "
-                    + LiftUtil.toPrettyString(lift.getPosition()) + " moving " + lift.getDirection());
+                    + lift.getPosition() + " moving " + lift.getDirection());
         }
         return true;
     }

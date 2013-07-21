@@ -12,10 +12,32 @@ commands:
         aliases: ["addlift", "createlift"]
         description: "Create a new lift"
         usage: "/<command> [location] <up|down>"
+        permission: "${project.name}.lift.new"
     "islift":
-        aliases: ["liftexists", "haslift"]
+        aliases: ["islift", "liftexists", "haslift"]
         description: "Shows whether a certain point has a lift"
         usage: "/<command> <location>"
+        permission: "${project.name}.lift.exists"
     "lslifts":
         description: "List the lifts in <world>"
         usage: "/<command> [world]"
+        permission: "${project.name}.lift.list"
+
+permissions:
+    "${project.name}.*":
+        description: "Allows access to all ${project.name} functionality"
+        children:
+            "${project.name}.version":
+                description: "Get version about ${project.name}"
+            "${project.name}.reload":
+                description: "Reload the ${project.name} configuration"
+            "${project.name}.lift.*":
+                description: "Access lift management commands"
+                children:
+                    "${project.name}.lift.new":
+                        description: "Allow creating an new lift"
+                    "${project.name}.lift.exists":
+                        description: "Allow checking if a lift exists"
+                    "${project.name}.lift.list":
+                        descirption: "Allow listing all lifts in a world"
+

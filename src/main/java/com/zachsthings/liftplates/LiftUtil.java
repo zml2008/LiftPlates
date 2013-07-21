@@ -1,6 +1,5 @@
 package com.zachsthings.liftplates;
 
-import com.zachsthings.liftplates.util.Point;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -9,10 +8,6 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.command.CommandException;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.util.BlockVector;
-import org.bukkit.util.Vector;
-
-import java.util.Comparator;
 
 /**
  * @author zml2008
@@ -38,7 +33,9 @@ public final class LiftUtil {
 
     public static boolean isPressurePlate(Material mat) {
         return mat == Material.STONE_PLATE
-                || mat == Material.WOOD_PLATE;
+                || mat == Material.WOOD_PLATE
+				|| mat == Material.GOLD_PLATE
+				|| mat == Material.IRON_PLATE;
     }
 
     public static Location matchLocation(CommandSender sender, String testString) throws CommandException {
@@ -75,9 +72,5 @@ public final class LiftUtil {
         int z = Integer.parseInt(pointSplit[2]);
         return new Location(world, x, y, z);
 
-    }
-
-    public static String toPrettyString(Point loc) {
-        return "(" + loc.getX() + ", " + loc.getY() + ", " + loc.getZ() + ")";
     }
 }

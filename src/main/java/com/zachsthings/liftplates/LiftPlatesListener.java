@@ -13,7 +13,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockRedstoneEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -23,7 +22,7 @@ import java.util.regex.Pattern;
  * @author zml2008
  */
 public class LiftPlatesListener implements Listener {
-    public static final Pattern LIFT_SIGN_PATTERN = Pattern.compile("\\[lift:([^\\]]+)\\]");
+    public static final Pattern LIFT_SIGN_PATTERN = Pattern.compile("\\[lift:([^]]+)]");
     private final LiftPlatesPlugin plugin;
 
     public LiftPlatesListener(LiftPlatesPlugin plugin) {
@@ -71,7 +70,6 @@ public class LiftPlatesListener implements Listener {
         if (!config.storedSpecialBlocks.contains(event.getRegisteredBlock())) {
             config.specialBlocks.put(event.getRegisteredBlock().getDefaultType(), event.getRegisteredBlock());
             config.storedSpecialBlocks.add(event.getRegisteredBlock());
-            config.save(plugin.getConfig());
             plugin.saveConfig();
         }
     }

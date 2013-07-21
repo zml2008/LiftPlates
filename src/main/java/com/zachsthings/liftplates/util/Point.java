@@ -41,19 +41,19 @@ public class Point implements ConfigurationSerializable {
     }
 
     public Point setX(int x) {
-        return new Point(x, this.y, this.z);
+        return modified(x, this.y, this.z);
     }
 
     public Point setY(int y) {
-        return new Point(this.x, y, this.z);
+        return modified(this.x, y, this.z);
     }
 
     public Point setZ(int z) {
-        return new Point(this.x, this.y, z);
+        return modified(this.x, this.y, z);
     }
 
     public Point modify(BlockFace face, int count) {
-        return new Point(this.x + face.getModX() * count, this.y + face.getModY() * count, this.z + face.getModZ() * count);
+        return modified(this.x + face.getModX() * count, this.y + face.getModY() * count, this.z + face.getModZ() * count);
     }
 
     public Point modify(BlockFace face) {
@@ -61,7 +61,7 @@ public class Point implements ConfigurationSerializable {
     }
 
     public Point add(int x, int y, int z) {
-        return new Point(this.x + x, this.y + y, this.z + z);
+        return modified(this.x + x, this.y + y, this.z + z);
     }
 
     public int distanceSquared(Point other) {
@@ -79,6 +79,10 @@ public class Point implements ConfigurationSerializable {
     public Chunk getChunk(World world) {
         return world.getChunkAt(this.x >> 4, this.z >> 4);
     }
+
+	protected Point modified(int x, int y, int z) {
+		return new Point(x, y, z);
+	}
 
     public boolean equals(Object obj) {
         if (!(obj instanceof Point)) {
@@ -101,7 +105,7 @@ public class Point implements ConfigurationSerializable {
 
     @Override
     public String toString() {
-        return "Point{x=" + this.x + ",y=" + this.y + ",z=" + this.z + "}";
+        return "(" + this.x + "," + this.y + "," + this.z + ")";
     }
 
     public Map<String, Object> serialize() {

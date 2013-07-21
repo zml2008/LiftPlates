@@ -32,6 +32,9 @@ public class LiftPlatesCommands extends ChildrenCommandExecutor {
 
         @Override
         public boolean execute(CommandSender sender, Command command, String[] arguments) throws CommandException {
+			if (!sender.hasPermission("liftplates.version")) {
+				throw new CommandException("You do not have permission for /liftplates version");
+			}
             PluginDescriptionFile desc = plugin.getDescription();
             sender.sendMessage(ChatColor.BLUE + desc.getName() + " version " + desc.getVersion());
             sender.sendMessage(ChatColor.BLUE + "Written by " + StringUtils.join(desc.getAuthors(), ", "));
@@ -48,6 +51,10 @@ public class LiftPlatesCommands extends ChildrenCommandExecutor {
 
         @Override
         public boolean execute(CommandSender sender, Command command, String[] arguments) throws CommandException {
+			if (!sender.hasPermission("liftplates.reload")) {
+				throw new CommandException("You do not have permission for /liftplates reload");
+			}
+
             try {
                 plugin.reload();
                 sender.sendMessage(ChatColor.BLUE + plugin.getName() + " successfully reloaded");
