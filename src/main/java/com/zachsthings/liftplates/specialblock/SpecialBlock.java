@@ -28,22 +28,22 @@ public abstract class SpecialBlock {
     /**
      * Stops the lift for 2 cycles
      */
-    public static final SpecialBlock PAUSE = new DelaySpecialBlock(Material.IRON_BLOCK, 2);
+    public static final SpecialBlock PAUSE = register(new DelaySpecialBlock(Material.IRON_BLOCK, 2));
 
     /**
      * This special block stops the lift util its associated pressure plate is retriggered
      */
-    public static final SpecialBlock STATION = new StationSpecialBlock();
+    public static final SpecialBlock STATION = register(new StationSpecialBlock());
 
     /**
      * Prevents the lift from moving up beyond the current block
      */
-    public static final SpecialBlock STOP_UP = new StopSpecialBlock(Lift.Direction.UP, Material.OBSIDIAN);
+    public static final SpecialBlock STOP_UP = register(new StopSpecialBlock(Lift.Direction.UP, Material.OBSIDIAN));
 
     /**
      * Prevents the lift from moving down beyond the current block
      */
-    public static final SpecialBlock STOP_DOWN = new StopSpecialBlock(Lift.Direction.DOWN, Material.ICE);
+    public static final SpecialBlock STOP_DOWN = register(new StopSpecialBlock(Lift.Direction.DOWN, Material.ICE));
 
     private final String name;
     private final Material type;
@@ -51,8 +51,12 @@ public abstract class SpecialBlock {
     public SpecialBlock(String name, Material type) {
         this.name = name;
         this.type = type;
-        BY_NAME.put(name.toLowerCase(), this);
-        Bukkit.getServer().getPluginManager().callEvent(new SpecialBlockRegisterEvent(this));
+    }
+
+    public static <T extends SpecialBlock> T register(T block) {
+        BY_NAME.put(block.getName().toLowerCase(), block);
+        Bukkit.getServer().getPluginManager().callEvent(new SpecialBlockRegisterEvent(block));
+        return block;
     }
 
     public String getName() {
