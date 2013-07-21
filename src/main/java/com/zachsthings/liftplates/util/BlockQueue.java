@@ -4,6 +4,8 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.material.Attachable;
 import org.bukkit.material.MaterialData;
 
@@ -51,17 +53,20 @@ public class BlockQueue {
 
     private final BlockOrder order;
     private final World world;
-    private final Map<Point, MaterialData> changesNormal;
-    private final Map<Point, MaterialData> changesLast;
+    private final Map<Point, MaterialData> changesNormal = new HashMap<Point, MaterialData>();
+    private final Map<Point, MaterialData> changesLast = new HashMap<Point, MaterialData>();
+	private final Map<Point, NMSTileEntityInterface.TEntWrapper> tileEntityBlocks = new HashMap<Point, NMSTileEntityInterface.TEntWrapper>();
 
     public BlockQueue(World world, BlockOrder order) {
         this.world = world;
         this.order = order;
-        changesNormal = new HashMap<Point, MaterialData>();
-        changesLast = new HashMap<Point, MaterialData>();
     }
 
-    public void set(Point point, MaterialData mat) {
+	public void set(Point point, MaterialData mat) {
+		set(point, mat, null);
+	}
+
+    public void set(Point point, MaterialData mat, NMSTileEntityInterface.TEntWrapper tentData) {
         MaterialData testMat = mat;
         if (mat.getItemType() == Material.AIR) {
             Block testBlock = point.getBlock(world);
@@ -75,6 +80,10 @@ public class BlockQueue {
             changesNormal.put(point, mat);
             changesLast.remove(point);
         }
+
+		if (tentData != null) {
+			tileEntityBlocks.put(point, tentData);
+		}
     }
 
     public void setAll(Map<Point, MaterialData> changes) {
@@ -95,25 +104,34 @@ public class BlockQueue {
 
 
         for (Map.Entry<Point, MaterialData> entry : first) {
-            MaterialData type = modifyMaterialData(entry.getValue());
-            Block target = entry.getKey().getBlock(world);
-            if (target.getType() == type.getItemType() && target.getData() == type.getData()) {
-                continue;
-            }
-            target.setTypeIdAndData(type.getItemTypeId(),
-                    type.getData(), !setNoPhysics(type.getItemType()));
+           applyBlockChange(entry.getKey(), entry.getValue());
         }
 
         for (Map.Entry<Point, MaterialData> entry : second) {
-            MaterialData type = modifyMaterialData(entry.getValue());
-            Block target = entry.getKey().getBlock(world);
-            if (target.getType() == type.getItemType() && target.getData() == type.getData()) {
-                continue;
-            }
-            target.setTypeIdAndData(type.getItemTypeId(),
-                    type.getData(), !setNoPhysics(type.getItemType()));
+			applyBlockChange(entry.getKey(), entry.getValue());
         }
     }
+
+	protected void applyBlockChange(Point pt, MaterialData mat) {
+		MaterialData type = modifyMaterialData(mat);
+		Block target = pt.getBlock(world);
+		if (target.getType() == type.getItemType() && target.getData() == type.getData()) { // Only do things if the type is different
+			return;
+		}
+
+		if (type.getItemType() == Material.AIR) { // Clear out inventory blocks so they don't drop items
+			BlockState state = target.getState();
+			if (state instanceof InventoryHolder) {
+				((InventoryHolder) state).getInventory().clear();
+			}
+		}
+		target.setTypeIdAndData(type.getItemTypeId(),
+				type.getData(), !setNoPhysics(type.getItemType()));
+		NMSTileEntityInterface.TEntWrapper tileEntityData = tileEntityBlocks.get(pt);
+		if (tileEntityData != null) {
+			NMSTileEntityInterface.applyData(tileEntityData, target);
+		}
+	}
 
     protected MaterialData modifyMaterialData(MaterialData input) {
         return input;

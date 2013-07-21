@@ -3,6 +3,7 @@ package com.zachsthings.liftplates;
 import com.zachsthings.liftplates.specialblock.SpecialBlock;
 import com.zachsthings.liftplates.util.BlockQueue;
 import com.zachsthings.liftplates.util.IntPairKey;
+import com.zachsthings.liftplates.util.NMSTileEntityInterface;
 import com.zachsthings.liftplates.util.Point;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -171,6 +172,7 @@ public class LiftContents {
         // Move
         for (Point loc : getBlocks()) {
             Block oldBlock = loc.getBlock(lift.getManager().getWorld());
+			NMSTileEntityInterface.TEntWrapper tentData = NMSTileEntityInterface.getData(oldBlock);
             Point newLoc = loc.modify(direction);
             locations.add(newLoc);
             Block newBlock = newLoc.getBlock(lift.getManager().getWorld());
@@ -180,7 +182,7 @@ public class LiftContents {
                 break;
             }
 
-            addBlocks.set(newLoc, oldBlock.getType().getNewData(oldBlock.getData()));
+            addBlocks.set(newLoc, oldBlock.getType().getNewData(oldBlock.getData()), tentData);
             removeBlocks.set(loc, new MaterialData(Material.AIR));
 
         }
