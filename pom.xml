@@ -25,7 +25,7 @@
       <artifactId>bukkit</artifactId>
       <version>${bukkitVersion}</version>
     </dependency>
-    <dependency>
+    <dependency> <!-- This is actually reflected at runtime, kept here to remind people though -->
         <groupId>org.bukkit</groupId>
         <artifactId>craftbukkit</artifactId>
         <version>${bukkitVersion}</version>
