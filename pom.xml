@@ -12,6 +12,12 @@
       <project.build.sourceEncoding>utf-8</project.build.sourceEncoding>
       <bukkitVersion>1.6.2-R0.1-SNAPSHOT</bukkitVersion>
   </properties>
+
+  <scm>
+    <connection>scm:git:git://github.com/zml2008/LiftPlates.git</connection>
+    <developerConnection>scm:git:github.com:zml2008/LiftPlates.git</developerConnection>
+    <url>https://github.com/zml2008/LiftPlates</url>
+  </scm>
   <repositories>
     <repository>
       <id>bukkit-repo</id>
