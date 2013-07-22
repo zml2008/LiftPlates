@@ -201,9 +201,9 @@ public class LiftContents {
         removeBlocks.apply();
         for (Entity entity : getEntities()) {
             Location newLocation = entity.getLocation().add(direction.getModX(), 0, direction.getModZ() );
-            if (!(entity instanceof LivingEntity) || direction.getModY() > 0 ) {
-                newLocation.add(0, direction.getModY(), 0);
-            }
+            //if (!(entity instanceof LivingEntity) || direction.getModY() > 0 ) {
+                newLocation.add(0, Math.max(-0.5, direction.getModY()), 0);
+            //}
             entity.teleport(newLocation, PlayerTeleportEvent.TeleportCause.PLUGIN);
 
         }
