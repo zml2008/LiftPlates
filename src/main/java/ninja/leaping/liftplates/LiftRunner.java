@@ -83,6 +83,7 @@ public class LiftRunner implements Runnable {
 
     public void run() {
         for (Iterator<Location> i = triggeredPoints.iterator(); i.hasNext();) {
+            boolean triggered = false;
             Location point = i.next();
             if (!point.getData(PoweredData.class).isPresent()) {
                 i.remove();
@@ -90,6 +91,7 @@ public class LiftRunner implements Runnable {
             }
             Lift lift = plugin.getLiftManager(point.getExtent()).getLift(point.getBlockPosition());
             if (lift != null) { // Lift plate
+				triggered = true;
                 if (!movingLifts.containsKey(lift)) {
                     LiftState liftState = new LiftState();
                     movingLifts.put(lift, liftState);
@@ -106,10 +108,11 @@ public class LiftRunner implements Runnable {
                     SpecialBlock block = lift.getSpecialBlock(specialLoc.getType());
                     if (block != null) {
                         block.plateTriggered(lift, specialLoc);
+                        triggered = true;
                     }
                 }
             }
-            if (LiftUtil.isPressurePlate(point.getType())) {
+            if (triggered && LiftUtil.isPressurePlate(point.getType())) {
                 point.remove(PoweredData.class);
             }
             i.remove();
