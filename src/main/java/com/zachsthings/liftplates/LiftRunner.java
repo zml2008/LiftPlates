@@ -83,6 +83,7 @@ public class LiftRunner implements Runnable {
 
     public void run() {
         for (Iterator<WorldPoint> i = triggeredPoints.iterator(); i.hasNext();) {
+			boolean triggered = false;
             WorldPoint point = i.next();
             if (point.getBlock().getBlockPower() == 0) {
                 i.remove();
@@ -90,6 +91,7 @@ public class LiftRunner implements Runnable {
             }
             Lift lift = plugin.getLiftManager(point.getWorld()).getLift(point.toPoint());
             if (lift != null) { // Lift plate
+				triggered = true;
                 if (!movingLifts.containsKey(lift)) {
                     LiftState liftState = new LiftState();
                     movingLifts.put(lift, liftState);
@@ -106,10 +108,11 @@ public class LiftRunner implements Runnable {
                     SpecialBlock block = lift.getSpecialBlock(bukkitBlock.getType());
                     if (block != null) {
                         block.plateTriggered(lift, bukkitBlock);
+						triggered = true;
                     }
                 }
             }
-            if (LiftUtil.isPressurePlate(point.getBlock().getType())) {
+            if (triggered && LiftUtil.isPressurePlate(point.getBlock().getType())) {
                 point.getBlock().setData((byte) 0);
             }
             i.remove();
