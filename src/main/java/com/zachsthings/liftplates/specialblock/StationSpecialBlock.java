@@ -1,14 +1,16 @@
 package com.zachsthings.liftplates.specialblock;
 
+import com.flowpowered.math.vector.Vector3i;
+import com.google.common.base.Optional;
 import com.zachsthings.liftplates.Lift;
 import com.zachsthings.liftplates.LiftContents;
 import com.zachsthings.liftplates.LiftRunner;
 import com.zachsthings.liftplates.MoveResult;
-import com.zachsthings.liftplates.util.Point;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
+import org.spongepowered.api.block.BlockType;
+import org.spongepowered.api.block.BlockTypes;
+import org.spongepowered.api.service.scheduler.Task;
+import org.spongepowered.api.util.Direction;
+import org.spongepowered.api.world.Location;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -17,12 +19,12 @@ import java.util.Set;
  * This special block stops the lift util its associated pressure plate is re-triggered
  */
 public class StationSpecialBlock extends SpecialBlock {
-    private final Set<Block> activeBlocks = new HashSet<Block>();
+    private final Set<Location> activeBlocks = new HashSet<Location>();
     public StationSpecialBlock() {
-        super("Station", Material.GOLD_BLOCK);
+        super("Station", BlockTypes.GOLD_BLOCK);
     }
 
-    protected StationSpecialBlock(String name, Material type) {
+    protected StationSpecialBlock(String name, BlockType type) {
         super(name, type);
     }
 
@@ -32,34 +34,37 @@ public class StationSpecialBlock extends SpecialBlock {
     }
 
     @Override
-    public void plateTriggered(Lift lift, Block block) {
+    public void plateTriggered(Lift lift, Location block) {
         if (!activeBlocks.contains(block)) {
             activeBlocks.add(block);
             CallLift call = new CallLift(block, lift);
-            call.taskId = Bukkit.getServer().getScheduler().scheduleSyncRepeatingTask(
-                    Bukkit.getServer().getPluginManager().getPlugin("LiftPlates"),
-                    call, 0, LiftRunner.RUN_FREQUENCY);
+            Optional<Task> task = lift.getPlugin().getGame().getSyncScheduler().runRepeatingTask(lift.getPlugin(), call, LiftRunner.RUN_FREQUENCY);
+            if (task.isPresent()) {
+                call.task = task.get();
+            } else {
+                lift.getPlugin().getLogger().warn("Unable to schedule call task for call button at " + block);
+            }
         }
     }
 
     private class CallLift implements Runnable {
-        private int taskId;
-        private final BlockFace direction;
-        private final Block target;
+        private Task task;
+        private final Direction direction;
+        private final Location target;
         private final Lift lift;
-        private Point nearestLiftBlock;
+        private Vector3i nearestLiftBlock;
 
-        public CallLift(Block target, Lift lift) {
+        public CallLift(Location target, Lift lift) {
             this.target = target;
             this.lift = lift;
             LiftContents contents = lift.getContents();
 
-            Point blockLoc = new Point(target.getLocation());
+            Vector3i blockLoc = target.getBlockPosition();
             final int requiredY = lift.getPosition().getY() - 1;
-            Point nearestLoc = null;
+            Vector3i nearestLoc = null;
             int distance = Integer.MAX_VALUE;
 
-            for (Point loc : contents.getBlocks()) {
+            for (Vector3i loc : contents.getBlocks()) {
                 if (loc.getY() == requiredY) {
                     if (loc.distanceSquared(blockLoc) < distance) {
                         nearestLoc = loc;
@@ -72,33 +77,26 @@ public class StationSpecialBlock extends SpecialBlock {
             }
             this.nearestLiftBlock = nearestLoc;
 
-            BlockFace liftDirection = lift.getDirection().getFace();
+            Direction liftDirection = lift.getDirection();
 
             // Calculate the distances to travel and restrict them to directions the lift can move in normal operation
-            int dx = (blockLoc.getX() - nearestLoc.getX()) * Math.abs(liftDirection.getModX());
-            int dy = (blockLoc.getY() - nearestLoc.getY()) * Math.abs(liftDirection.getModY());
-            int dz = (blockLoc.getZ() - nearestLoc.getZ()) * Math.abs(liftDirection.getModZ());
+            Vector3i delta = blockLoc.sub(nearestLoc).mul(liftDirection.toVector3d().toInt().abs());
+            delta.div(delta.getX() == 0 ? 1 : Math.abs(delta.getX()),
+                    delta.getY() == 0 ? 1 : Math.abs(delta.getY()),
+                    delta.getZ() == 0 ? 1 : Math.abs(delta.getZ()));
 
-
-            // Make the amounts -1, 0, or 1
-            dx = dx == 0 ? 0 : dx / Math.abs(dx);
-            dy = dy == 0 ? 0 : dy / Math.abs(dy);
-            dz = dz == 0 ? 0 : dz / Math.abs(dz);
-
-            BlockFace moveFace = null;
-            for (BlockFace face : BlockFace.values()) {
-                if (face.getModX() == dx
-                        && face.getModY() == dy
-                        && face.getModZ() == dz) {
+            Direction moveFace = Direction.getClosest(delta.toDouble()); // TODO: Does this get what I want?
+            /*for (Direction face : Direction.values()) {
+                if (face.toVector3d().toInt().equals(delta)) {
                     moveFace = face;
                     break;
                 }
-            }
+            }*/
+
 
             if (moveFace == null) {
-                throw new IllegalArgumentException("No BlockFace for direction that lift is supposed to move ("
-                        + dx + ", " + dy + ", " + dz +  ")!");
-            } else if (moveFace == BlockFace.SELF) {
+                throw new IllegalArgumentException("No BlockFace for direction that lift is supposed to move (" + delta + "!");
+            } else if (moveFace == Direction.NONE) {
 
             }
             direction = moveFace;
@@ -106,13 +104,13 @@ public class StationSpecialBlock extends SpecialBlock {
 
         public void run() {
             lift.getPlugin().getLiftRunner().stopLift(lift);
-            final Point blockLoc = new Point(target.getLocation());
+            final Vector3i blockLoc = target.getBlockPosition();
             LiftContents contents = lift.getContents();
             final int requiredY = lift.getPosition().getY() - 1;
-            Point nearestLoc = null;
+            Vector3i nearestLoc = null;
             int distance = Integer.MAX_VALUE;
 
-            for (Point loc : contents.getBlocks()) {
+            for (Vector3i loc : contents.getBlocks()) {
                 if (loc.getY() == requiredY) {
                     if (loc.distanceSquared(blockLoc) < distance) {
                         nearestLoc = loc;
@@ -125,16 +123,15 @@ public class StationSpecialBlock extends SpecialBlock {
             }
 
             this.nearestLiftBlock = nearestLoc;
-            final int dx = (nearestLiftBlock.getX() - blockLoc.getX()) * direction.getModX(),
-                    dy = (nearestLiftBlock.getY() - blockLoc.getY()) * direction.getModY(),
-                    dz = (nearestLiftBlock.getZ() - blockLoc.getZ()) * direction.getModZ();
+            final Vector3i delta = nearestLiftBlock.sub(blockLoc).mul(direction.toVector3d().toInt());
 
             contents.update();
-            MoveResult result = (dx == 0 && dy == 0 && dz == 0) ? new MoveResult(MoveResult.Type.STOP) :
+            MoveResult result = delta.lengthSquared() == 0 ? new MoveResult(MoveResult.Type.STOP) :
                     contents.move(direction, true);
-            if (result.getType() == MoveResult.Type.STOP
-                    || result.getType() == MoveResult.Type.BLOCK) {
-                Bukkit.getServer().getScheduler().cancelTask(taskId);
+            if ((result.getType() == MoveResult.Type.STOP
+                    || result.getType() == MoveResult.Type.BLOCK) && this.task != null) {
+                task.cancel();
+                this.task = null;
                 activeBlocks.remove(target);
             }
         }

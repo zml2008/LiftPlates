@@ -1,21 +1,37 @@
 package com.zachsthings.liftplates;
 
-import com.zachsthings.liftplates.config.ConfigurationBase;
-import com.zachsthings.liftplates.config.Setting;
+import com.google.inject.Inject;
 import com.zachsthings.liftplates.specialblock.SpecialBlock;
-import org.bukkit.Material;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.event.Listener;
+import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.ConfigurationOptions;
+import ninja.leaping.configurate.commented.CommentedConfigurationNode;
+import ninja.leaping.configurate.loader.ConfigurationLoader;
+import ninja.leaping.configurate.objectmapping.ObjectMapper;
+import ninja.leaping.configurate.objectmapping.ObjectMappingException;
+import ninja.leaping.configurate.objectmapping.Setting;
+import org.spongepowered.api.block.BlockType;
+import org.spongepowered.api.service.config.ConfigDir;
+import org.spongepowered.api.service.config.DefaultConfig;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * @author zml2008
  */
-public class LiftPlatesConfig extends ConfigurationBase implements Listener {
+public class LiftPlatesConfig {
+    public static final ObjectMapper<LiftPlatesConfig> MAPPER;
+
+    static {
+        try {
+            MAPPER = ObjectMapper.forClass(LiftPlatesConfig.class);
+        } catch (ObjectMappingException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
     /**
      * Whether to treat a bunch of pressure plate lifts next to each other
      * with the same base block type as the same lift
@@ -24,7 +40,7 @@ public class LiftPlatesConfig extends ConfigurationBase implements Listener {
     /**
      * Allow configuration of which block types that have special functionality
      */
-    @Setting("special-blocks") private Map<String, String> rawSpecialBlocks = new HashMap<String, String>();
+    @Setting("special-blocks") public Map<BlockType, SpecialBlock> specialBlocks = new HashMap<BlockType, SpecialBlock>();
 
     /**
      * The maximum distance from the triggered pressure plate to look for blocks of the same type
@@ -37,43 +53,47 @@ public class LiftPlatesConfig extends ConfigurationBase implements Listener {
      */
     @Setting("lift-height") public int liftHeight = 2;
 
-    public Map<Material, SpecialBlock> specialBlocks = new HashMap<Material, SpecialBlock>();
-    Set<SpecialBlock> storedSpecialBlocks;
+    private ConfigurationNode config;
+    private final ConfigurationLoader<CommentedConfigurationNode> loader;
+    private final File configDir;
 
-    public void load(ConfigurationSection section) {
-        super.load(section);
-
-        storedSpecialBlocks = new HashSet<SpecialBlock>();
-
-        for (Map.Entry<String, String> entry : rawSpecialBlocks.entrySet()) {
-            SpecialBlock block = SpecialBlock.byName(entry.getKey());
-            Material mat = entry.getValue() == null ? null : Material.matchMaterial(entry.getValue());
-            if (block != null) {
-                if (mat != null) specialBlocks.put(mat, block);
-                storedSpecialBlocks.add(block);
-            }
-        }
-
-        boolean changed = false;
-        for (SpecialBlock type : SpecialBlock.getAll()) {
-            if (!storedSpecialBlocks.contains(type)) {
-                specialBlocks.put(type.getDefaultType(), type);
-                storedSpecialBlocks.add(type);
-                changed = true;
-            }
-        }
-
-        if (changed) {
-            save(section);
-        }
+    @Inject
+    LiftPlatesConfig(@DefaultConfig(sharedRoot =  false) ConfigurationLoader<CommentedConfigurationNode> loader,
+            @ConfigDir(sharedRoot = false) File configDir) {
+        this.loader = loader;
+        configDir.mkdirs();
+        this.configDir = configDir;
     }
 
-    public void save(ConfigurationSection section) {
-        rawSpecialBlocks.clear();
-        for (Map.Entry<Material, SpecialBlock> entry : specialBlocks.entrySet()) {
-            rawSpecialBlocks.put(entry.getValue().getName(), entry.getKey().name());
+    public void load() throws IOException {
+        this.config = this.loader.load();
+        try {
+            MAPPER.bind(this).populate(this.config);
+        } catch (ObjectMappingException e) {
+            throw new IOException(e);
         }
+        for (SpecialBlock block : SpecialBlock.getAll()) {
+            if (!this.specialBlocks.containsValue(block)) {
+                this.specialBlocks.put(block.getDefaultType(), block);
+            }
+        }
+        this.loader.save(this.config);
+    }
 
-        super.save(section);
+    public void save() throws IOException {
+        if (this.config == null) {
+            this.config = this.loader.createEmptyNode(ConfigurationOptions.defaults());
+        }
+        try {
+            MAPPER.bind(this).serialize(this.config);
+        } catch (ObjectMappingException e) {
+            throw new IOException(e);
+        }
+        this.loader.save(this.config);
+
+    }
+
+    public File getConfigDir() {
+        return this.configDir;
     }
 }

@@ -1,60 +1,55 @@
 package com.zachsthings.liftplates;
 
+import com.flowpowered.math.vector.Vector3i;
+import com.google.common.base.Preconditions;
 import com.zachsthings.liftplates.specialblock.SpecialBlock;
-import com.zachsthings.liftplates.util.Point;
-import org.apache.commons.lang.Validate;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.configuration.serialization.ConfigurationSerializable;
-import org.bukkit.configuration.serialization.SerializableAs;
+import ninja.leaping.configurate.objectmapping.ObjectMapper;
+import ninja.leaping.configurate.objectmapping.ObjectMappingException;
+import ninja.leaping.configurate.objectmapping.Setting;
+import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
+import org.spongepowered.api.block.BlockType;
+import org.spongepowered.api.util.Direction;
+import org.spongepowered.api.world.World;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 /**
  * @author zml2008
  */
-@SerializableAs("LiftPlates-Lift")
-public class Lift implements ConfigurationSerializable {
+@ConfigSerializable
+public class Lift {
+    public static final ObjectMapper<Lift> MAPPER;
 
-    public static enum Direction {
-        UP (BlockFace.UP),
-        DOWN(BlockFace.DOWN),
-        ;
-
-        private final BlockFace face;
-
-        private Direction(BlockFace face) {
-            this.face = face;
-        }
-
-        /**
-         * Gets the BlockFace this direction corresponds to. This can be used with {@link LiftContents#move(BlockFace, boolean)}.
-         *
-         * @return this direction's BlockFace.
-         */
-        public BlockFace getFace() {
-            return face;
+    static {
+        try {
+            MAPPER = ObjectMapper.forClass(Lift.class);
+        } catch (ObjectMappingException e) {
+            throw new ExceptionInInitializerError(e);
         }
     }
+
     /**
      * The LiftManager this Lift is located in. Required for a complete Lift object
      */
     private LiftManager manager;
 
+    @Setting
     private Direction direction = Direction.UP;
 
     /**
      * The position of this lift (pressure plate) in the world
      */
-    private Point position;
+    @Setting
+    private Vector3i position;
 
-    public Lift(Point position) {
+    public Lift() {
+    }
+
+    public Lift(Vector3i position) {
         this.position = position;
     }
+
 
     /**
      * Return which direction the attached lift will move when triggered by an attached
@@ -80,11 +75,11 @@ public class Lift implements ConfigurationSerializable {
      * @see #position
      * @return This lift's position
      */
-    public Point getPosition() {
+    public Vector3i getPosition() {
         return position;
     }
 
-    void setPosition(Point position) {
+    void setPosition(Vector3i position) {
         this.position = position;
     }
 
@@ -94,7 +89,7 @@ public class Lift implements ConfigurationSerializable {
      * @param manager The manager to set
      */
     protected void setManager(LiftManager manager) {
-        Validate.notNull(manager);
+        Preconditions.checkNotNull(manager, "manager");
         if (this.manager != null) {
             throw new IllegalStateException("A manager (" + manager + ") has already been set for the lift " + this);
         }
@@ -118,10 +113,10 @@ public class Lift implements ConfigurationSerializable {
      * @return The blocks that this lift will move
      */
     public LiftContents getContents() {
-        Set<Point> blocks = new HashSet<Point>();
-        Set<Point> edgeBlocks = new HashSet<Point>();
-        Point location = position.setY(position.getY() - 1);
-        travelBlocks(location, location, blocks, new HashSet<Point>(), edgeBlocks);
+        Set<Vector3i> blocks = new HashSet<Vector3i>();
+        Set<Vector3i> edgeBlocks = new HashSet<Vector3i>();
+        Vector3i location = position.add(0, -1, 0);
+        travelBlocks(location, location, blocks, new HashSet<Vector3i>(), edgeBlocks);
 
         return new LiftContents(this, edgeBlocks, blocks);
     }
@@ -144,7 +139,7 @@ public class Lift implements ConfigurationSerializable {
      * @param validLocations The list of already travelled and valid locations
      * @param visited The list of already travelled (not necessarily valid) locations
      */
-    private void travelBlocks(Point start, Point current, Set<Point> validLocations, Set<Point> visited, Set<Point> edgeBlocks) {
+    private void travelBlocks(Vector3i start, Vector3i current, Set<Vector3i> validLocations, Set<Vector3i> visited, Set<Vector3i> edgeBlocks) {
         visited.add(current);
 
         LiftPlatesConfig config = manager.getPlugin().getConfiguration();
@@ -154,16 +149,15 @@ public class Lift implements ConfigurationSerializable {
             return;
         }
 
-        Block currentBlock = current.getBlock(manager.getWorld());
-        Block startBlock = start.getBlock(manager.getWorld());
-        if (currentBlock.getTypeId() != startBlock.getTypeId()
-                || currentBlock.getData() != startBlock.getData()) { // Different block type
+        World world = manager.getWorld();
+        world.getFullBlock(start).getRelative(Direction.UP);
+        if (!world.getBlock(start).equals(world.getBlock(current))) { // Different block type
             edgeBlocks.add(current);
             return;
         }
 
         if (!config.recursiveLifts
-                && !LiftUtil.isPressurePlate(current.modify(BlockFace.UP).getBlock(manager.getWorld()).getType())) { // Not a pressure plate
+                && !LiftUtil.isPressurePlate(world.getBlockType(current.add(0, 1, 0)))) { // Not a pressure plate
             edgeBlocks.add(current);
             return;
         }
@@ -171,11 +165,11 @@ public class Lift implements ConfigurationSerializable {
         validLocations.add(current);
 
         for (int i = 1; i < config.liftHeight; ++i) {
-            validLocations.add(current.setY(current.getY() + i));
+            validLocations.add(current.add(0, i, 0));
         }
 
-        for (BlockFace face : LiftUtil.NSEW_FACES) {
-            Point newLoc = current.modify(face);
+        for (Direction face : LiftUtil.NSEW_FACES) {
+            Vector3i newLoc = current.add(face.toVector3d().toInt());
             if (visited.contains(newLoc)) {
                 continue;
             }
@@ -184,26 +178,9 @@ public class Lift implements ConfigurationSerializable {
         }
     }
 
-    public SpecialBlock getSpecialBlock(Material mat) {
+    public SpecialBlock getSpecialBlock(BlockType mat) {
         SpecialBlock block = manager.getPlugin().getConfiguration().specialBlocks.get(mat);
         // TODO: Per-lift special block overrides
         return block;
-    }
-
-    // -- Dinnerconfig Serialization methods
-
-    public Map<String, Object> serialize() {
-        Map<String, Object> ret = new HashMap<String, Object>();
-        ret.put("position", position);
-        ret.put("direction", direction.name());
-        return ret;
-    }
-
-    public static Lift deserialize(Map<String, Object> data) {
-        Point position = (Point) data.get("position");
-        Direction direction = Direction.valueOf(String.valueOf(data.get("direction")));
-        Lift lift = new Lift(position);
-        lift.direction = direction;
-        return lift;
     }
 }

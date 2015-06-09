@@ -1,20 +1,18 @@
 package com.zachsthings.liftplates;
 
+import com.flowpowered.math.vector.Vector3i;
+import com.google.common.base.Optional;
 import com.zachsthings.liftplates.specialblock.SpecialBlock;
 import com.zachsthings.liftplates.util.BlockQueue;
 import com.zachsthings.liftplates.util.IntPairKey;
-import com.zachsthings.liftplates.util.NMSTileEntityInterface;
-import com.zachsthings.liftplates.util.Point;
-import org.bukkit.Chunk;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.event.player.PlayerTeleportEvent;
-import org.bukkit.material.Button;
-import org.bukkit.material.MaterialData;
+import org.spongepowered.api.block.BlockState;
+import org.spongepowered.api.block.BlockType;
+import org.spongepowered.api.block.BlockTypes;
+import org.spongepowered.api.data.manipulator.block.PoweredData;
+import org.spongepowered.api.entity.Entity;
+import org.spongepowered.api.util.Direction;
+import org.spongepowered.api.world.Chunk;
+import org.spongepowered.api.world.Location;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -26,12 +24,12 @@ import java.util.Set;
 public class LiftContents {
     private final Lift lift;
     private Set<SpecialBlock> specialBlocks;
-    private Set<Point> locations;
+    private Set<Vector3i> locations;
     private Set<Entity> entities;
-    private Set<Point> edgeBlocks;
+    private Set<Vector3i> edgeBlocks;
     private Set<Lift> lifts;
 
-    public LiftContents(Lift lift, Set<Point> edgeBlocks, Set<Point> locations) {
+    public LiftContents(Lift lift, Set<Vector3i> edgeBlocks, Set<Vector3i> locations) {
         this.lift = lift;
         this.edgeBlocks = Collections.unmodifiableSet(edgeBlocks);
         this.locations = Collections.unmodifiableSet(locations);
@@ -44,11 +42,11 @@ public class LiftContents {
         return specialBlocks;
     }
 
-    public Set<Point> getEdgeBlocks() {
+    public Set<Vector3i> getEdgeBlocks() {
         return edgeBlocks;
     }
 
-    public Set<Point> getBlocks() {
+    public Set<Vector3i> getBlocks() {
         return locations;
     }
 
@@ -69,14 +67,16 @@ public class LiftContents {
     public void update() {
         Set<Entity> entities = new HashSet<Entity>();
         Set<Long> chunks = new HashSet<Long>();
-        for (Point loc : locations) {
+        for (Vector3i loc : locations) {
             chunks.add(IntPairKey.key(loc.getX() >> 4, loc.getZ() >> 4));
         }
         for (long key : chunks) {
-            Chunk chunk = lift.getManager().getWorld().getChunkAt(IntPairKey.key1(key), IntPairKey.key2(key));
-            for (Entity entity : chunk.getEntities()) {
-                if (locations.contains(new Point(entity.getLocation()))) {
-                    entities.add(entity);
+            Optional<Chunk> chunk = lift.getManager().getWorld().getChunk(IntPairKey.key1(key), 0, IntPairKey.key2(key));
+            if (chunk.isPresent()) {
+                for (Entity entity : chunk.get().getEntities()) {
+                    if (locations.contains(entity.getLocation().getBlockPosition())) {
+                        entities.add(entity);
+                    }
                 }
             }
         }
@@ -84,8 +84,8 @@ public class LiftContents {
 
         Set<SpecialBlock> specialBlocks = new HashSet<SpecialBlock>();
 
-        for (Point loc : getEdgeBlocks()) {
-            SpecialBlock block = lift.getSpecialBlock(loc.getBlock(lift.getManager().getWorld()).getType());
+        for (Vector3i loc : getEdgeBlocks()) {
+            SpecialBlock block = lift.getSpecialBlock(lift.getManager().getWorld().getBlockType(loc));
             if (block != null) {
                 specialBlocks.add(block);
             }
@@ -93,7 +93,7 @@ public class LiftContents {
         this.specialBlocks = Collections.unmodifiableSet(specialBlocks);
 
         Set<Lift> lifts = new HashSet<Lift>();
-        for (Point loc : getBlocks()) {
+        for (Vector3i loc : getBlocks()) {
             Lift testLift = lift.getManager().getLift(loc);
             if (testLift != null) {
                 lifts.add(testLift);
@@ -107,13 +107,13 @@ public class LiftContents {
      *
      * Moves the lift in its default direction
      *
-     * @see #move(org.bukkit.block.BlockFace, boolean)
+     * @see #move(org.spongepowered.api.util.Direction, boolean)
      * @param ignoreSpecialBlocks Whether special blocks should have an
      *     effect on the motion of the lift
      * @return Whether the motion was successful
      */
     public MoveResult move(boolean ignoreSpecialBlocks) {
-        return move(lift.getDirection().getFace(), ignoreSpecialBlocks);
+        return move(lift.getDirection(), ignoreSpecialBlocks);
     }
 
     /**
@@ -124,7 +124,7 @@ public class LiftContents {
         return move(false);
     }
 
-    public MoveResult move(BlockFace face) {
+    public MoveResult move(Direction face) {
         return move(face, false);
     }
 
@@ -135,7 +135,8 @@ public class LiftContents {
      * @return Whether the lift could be successfully moved.
      *      This will return false if the lift tries to move to an already occupied position.
      */
-    public MoveResult move(BlockFace direction, boolean ignoreSpecialBlocks) { // We might want to cache the data used in here for elevator trips. Will reduce server load
+    public MoveResult move(Direction direction, boolean ignoreSpecialBlocks) { // We might want to cache the data used in here for elevator trips. Will
+    // reduce server load
         if (this.entities == null) {
             this.update();
         }
@@ -145,15 +146,16 @@ public class LiftContents {
         BlockQueue removeBlocks = new BlockQueue(lift.getManager().getWorld(), BlockQueue.BlockOrder.TOP_DOWN);
         BlockQueue addBlocks = new BlockQueue(lift.getManager().getWorld(), BlockQueue.BlockOrder.BOTTOM_UP) {
             @Override
-            protected MaterialData modifyMaterialData(MaterialData input) {
-                if (LiftUtil.isPressurePlate(input.getItemType())) {
-                    input.setData((byte) 0x0); // Unpress any pressure plates -- these aren't updated correctly when the block is moved
-                } else if (input.getItemType() == Material.STONE_BUTTON) {
-                    ((Button) input).setPowered(false); // Same for buttons
-                } else if (input.getItemType() == Material.REDSTONE_TORCH_OFF) {
-                    input = Material.REDSTONE_TORCH_ON.getNewData(input.getData());
+            protected BlockState modifyBlockState(BlockState input) {
+                if (LiftUtil.isPressurePlate(input.getType())
+                        || input.getType() == BlockTypes.STONE_BUTTON
+                        || input.getType() == BlockTypes.WOODEN_BUTTON) {
+                    input = input.withoutData(PoweredData.class).get();
+                } else if (input.getType() == BlockTypes.REDSTONE_TORCH) {
+                    input = input.withData(lift.getPlugin().getGame().getRegistry().getManipulatorRegistry().getBuilder(PoweredData.class).get()
+                            .create()).get();
                 }
-                return super.modifyMaterialData(input);
+                return super.modifyBlockState(input);
             }
         };
 
@@ -167,23 +169,22 @@ public class LiftContents {
             }
         }
 
-        Set<Point> locations = new HashSet<Point>();
+        Set<Vector3i> locations = new HashSet<Vector3i>();
 
         // Move
-        for (Point loc : getBlocks()) {
-            Block oldBlock = loc.getBlock(lift.getManager().getWorld());
-			NMSTileEntityInterface.TEntWrapper tentData = NMSTileEntityInterface.getData(oldBlock);
-            Point newLoc = loc.modify(direction);
+        for (Vector3i loc : getBlocks()) {
+            BlockState oldBlock = lift.getManager().getWorld().getBlock(loc);
+            Vector3i newLoc = loc.add(direction.toVector3d().toInt());
             locations.add(newLoc);
-            Block newBlock = newLoc.getBlock(lift.getManager().getWorld());
+            BlockType newBlock = lift.getManager().getWorld().getBlockType(newLoc);
 
-            if (!newBlock.isEmpty() && !getBlocks().contains(newLoc)) {
+            if (newBlock != BlockTypes.AIR && !getBlocks().contains(newLoc)) {
                 type = MoveResult.Type.BLOCK;
                 break;
             }
 
-            addBlocks.set(newLoc, oldBlock.getType().getNewData(oldBlock.getData()), tentData);
-            removeBlocks.set(loc, new MaterialData(Material.AIR));
+            addBlocks.set(newLoc, oldBlock);
+            removeBlocks.set(loc, BlockTypes.AIR.getDefaultState());
 
         }
 
@@ -192,19 +193,19 @@ public class LiftContents {
         }
 
         // Update the location of any lifts in the moving blocks
-        // TODO: Update tile entity data (needs n.m.s code) and call LiftMoveEvent to allow other plugins to move their objects
-        // This will need a more complete object to store block data (old location, new location, type, data, tile entity data)
+        // TODO: Call LiftMoveEvent to allow other plugins to move their objects
         for (Lift lift : getLifts()) {
-            lift.setPosition(lift.getPosition().modify(direction));
+            lift.setPosition(lift.getPosition().add(direction.toVector3d().toInt()));
         }
 
         removeBlocks.apply();
         for (Entity entity : getEntities()) {
-            Location newLocation = entity.getLocation().add(direction.getModX(), 0, direction.getModZ() );
+            Location newLocation = entity.getLocation().add(direction.toVector3d().getX(), Math.max(-0.5, direction.toVector3d().getY()), direction
+                    .toVector3d().getZ());
             //if (!(entity instanceof LivingEntity) || direction.getModY() > 0 ) {
-                newLocation.add(0, Math.max(-0.5, direction.getModY()), 0);
+            //    newLocation.add(0, Math.max(-0.5, direction.getModY()), 0);
             //}
-            entity.teleport(newLocation, PlayerTeleportEvent.TeleportCause.PLUGIN);
+            entity.setLocation(newLocation);
 
         }
 
@@ -212,9 +213,10 @@ public class LiftContents {
         lift.getManager().updateLiftLocations();
 
         this.locations = Collections.unmodifiableSet(locations);
-        Set<Point> edgeBlocks = new HashSet<Point>();
-        for (Point edgeBlock : getEdgeBlocks()) {
-            edgeBlocks.add(edgeBlock.modify(direction));
+
+        Set<Vector3i> edgeBlocks = new HashSet<Vector3i>();
+        for (Vector3i edgeBlock : getEdgeBlocks()) {
+            edgeBlocks.add(edgeBlock.add(direction.toVector3d().toInt()));
         }
         this.edgeBlocks = Collections.unmodifiableSet(edgeBlocks);
 

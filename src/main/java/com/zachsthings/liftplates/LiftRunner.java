@@ -1,11 +1,11 @@
 package com.zachsthings.liftplates;
 
 import com.zachsthings.liftplates.specialblock.SpecialBlock;
-import com.zachsthings.liftplates.util.WorldPoint;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
+import org.spongepowered.api.data.manipulator.block.PoweredData;
+import org.spongepowered.api.entity.Entity;
+import org.spongepowered.api.entity.player.Player;
+import org.spongepowered.api.util.Direction;
+import org.spongepowered.api.world.Location;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,13 +22,13 @@ public class LiftRunner implements Runnable {
     public static final long RUN_FREQUENCY = 5;
     private final LiftPlatesPlugin plugin;
     private final Map<Lift, LiftState> movingLifts = new HashMap<Lift, LiftState>();
-    private Set<WorldPoint> triggeredPoints = new LinkedHashSet<WorldPoint>();
+    private Set<Location> triggeredPoints = new LinkedHashSet<Location>();
 
     public LiftRunner(LiftPlatesPlugin plugin) {
         this.plugin = plugin;
     }
 
-    public void plateTriggered(WorldPoint loc) {
+    public void plateTriggered(Location loc) {
         triggeredPoints.add(loc);
     }
 
@@ -82,13 +82,13 @@ public class LiftRunner implements Runnable {
     }
 
     public void run() {
-        for (Iterator<WorldPoint> i = triggeredPoints.iterator(); i.hasNext();) {
-            WorldPoint point = i.next();
-            if (point.getBlock().getBlockPower() == 0) {
+        for (Iterator<Location> i = triggeredPoints.iterator(); i.hasNext();) {
+            Location point = i.next();
+            if (!point.getData(PoweredData.class).isPresent()) {
                 i.remove();
                 continue;
             }
-            Lift lift = plugin.getLiftManager(point.getWorld()).getLift(point.toPoint());
+            Lift lift = plugin.getLiftManager(point.getExtent()).getLift(point.getBlockPosition());
             if (lift != null) { // Lift plate
                 if (!movingLifts.containsKey(lift)) {
                     LiftState liftState = new LiftState();
@@ -102,15 +102,15 @@ public class LiftRunner implements Runnable {
             } else { // Special block controller plate
                 lift = plugin.detectLift(point, true);
                 if (lift != null) {
-                    Block bukkitBlock = point.getBlock().getRelative(BlockFace.DOWN);
-                    SpecialBlock block = lift.getSpecialBlock(bukkitBlock.getType());
+                    Location specialLoc = point.getRelative(Direction.DOWN);
+                    SpecialBlock block = lift.getSpecialBlock(specialLoc.getType());
                     if (block != null) {
-                        block.plateTriggered(lift, bukkitBlock);
+                        block.plateTriggered(lift, specialLoc);
                     }
                 }
             }
-            if (LiftUtil.isPressurePlate(point.getBlock().getType())) {
-                point.getBlock().setData((byte) 0);
+            if (LiftUtil.isPressurePlate(point.getType())) {
+                point.remove(PoweredData.class);
             }
             i.remove();
         }

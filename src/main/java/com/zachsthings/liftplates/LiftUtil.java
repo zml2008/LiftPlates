@@ -1,44 +1,30 @@
 package com.zachsthings.liftplates;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
-import org.bukkit.block.BlockFace;
-import org.bukkit.command.CommandException;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
+import org.spongepowered.api.block.BlockType;
+import org.spongepowered.api.block.BlockTypes;
+import org.spongepowered.api.util.Direction;
 
 /**
  * @author zml2008
  */
 public final class LiftUtil {
-    private LiftUtil() {}
 
-    /**
-     * The {@link BlockFace#NORTH}, {@link BlockFace#SOUTH}, {@link BlockFace#EAST}, and {@link BlockFace#WEST} BlockFaces, for easy iteration
-     */
-    public static final BlockFace[] NSEW_FACES = new BlockFace[] {BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST};
-
-    /**
-     * Apply the given BlockFace to a new copy of the location
-     *
-     * @param loc The location to get a modified version of
-     * @param face The face to offset by
-     * @return A copy of {@code loc} modified by the given face offset
-     */
-    public static Location mod(Location loc, BlockFace face) {
-        return loc.clone().add(face.getModX(), face.getModY(), face.getModZ());
+    private LiftUtil() {
     }
 
-    public static boolean isPressurePlate(Material mat) {
-        return mat == Material.STONE_PLATE
-                || mat == Material.WOOD_PLATE
-				|| mat == Material.GOLD_PLATE
-				|| mat == Material.IRON_PLATE;
+    /**
+     * The {@link Direction#NORTH}, {@link Direction#SOUTH}, {@link Direction#EAST}, and {@link Direction#WEST} Directions, for easy iteration
+     */
+    public static final Direction[] NSEW_FACES = new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
+
+    public static boolean isPressurePlate(BlockType mat) {
+        return mat == BlockTypes.WOODEN_PRESSURE_PLATE
+                || mat == BlockTypes.STONE_PRESSURE_PLATE
+                || mat == BlockTypes.HEAVY_WEIGHTED_PRESSURE_PLATE
+                || mat == BlockTypes.LIGHT_WEIGHTED_PRESSURE_PLATE;
     }
 
-    public static Location matchLocation(CommandSender sender, String testString) throws CommandException {
+    /*public static Location matchLocation(CommandSender sender, String testString) throws CommandException {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             if (testString.equalsIgnoreCase("target")) {
@@ -72,5 +58,5 @@ public final class LiftUtil {
         int z = Integer.parseInt(pointSplit[2]);
         return new Location(world, x, y, z);
 
-    }
+    }*/
 }

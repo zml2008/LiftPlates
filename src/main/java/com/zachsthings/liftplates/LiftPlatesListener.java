@@ -1,19 +1,23 @@
 package com.zachsthings.liftplates;
 
+import com.flowpowered.math.vector.Vector3i;
+import com.google.common.base.Optional;
 import com.zachsthings.liftplates.specialblock.SpecialBlockRegisterEvent;
-import com.zachsthings.liftplates.util.Point;
-import com.zachsthings.liftplates.util.WorldPoint;
-import org.bukkit.Location;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.BlockState;
-import org.bukkit.block.Sign;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockRedstoneEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
+import org.spongepowered.api.block.BlockTypes;
+import org.spongepowered.api.block.tileentity.Sign;
+import org.spongepowered.api.block.tileentity.TileEntity;
+import org.spongepowered.api.data.manipulator.tileentity.SignData;
+import org.spongepowered.api.entity.EntityInteractionTypes;
+import org.spongepowered.api.event.Order;
+import org.spongepowered.api.event.Subscribe;
+import org.spongepowered.api.event.block.BlockRedstoneUpdateEvent;
+import org.spongepowered.api.event.entity.player.PlayerBreakBlockEvent;
+import org.spongepowered.api.event.entity.player.PlayerInteractBlockEvent;
+import org.spongepowered.api.text.Texts;
+import org.spongepowered.api.util.Direction;
+import org.spongepowered.api.world.Location;
 
+import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,7 +25,7 @@ import java.util.regex.Pattern;
  * Contains the event listeners. These mostly call other bits of the code.
  * @author zml2008
  */
-public class LiftPlatesListener implements Listener {
+public class LiftPlatesListener {
     public static final Pattern LIFT_SIGN_PATTERN = Pattern.compile("\\[lift:([^]]+)]");
     private final LiftPlatesPlugin plugin;
 
@@ -29,56 +33,61 @@ public class LiftPlatesListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onPressPlate(PlayerInteractEvent event) {
-        switch (event.getAction()) {
-            case LEFT_CLICK_BLOCK:
-                BlockState state = event.getClickedBlock().getState();
-                if (state instanceof Sign) {
-                    Sign sign = (Sign) state;
-                    Matcher match = LIFT_SIGN_PATTERN.matcher(sign.getLine(0));
+    @Subscribe
+    public void onPressPlate(PlayerInteractBlockEvent event) {
+        if (event.getInteractionType() == EntityInteractionTypes.USE) {
+            Optional<TileEntity> state = event.getBlock().getTileEntity();
+            if (state.isPresent() && state.get() instanceof Sign) {
+                Sign sign = (Sign) state.get();
+                Optional<SignData> data = sign.getData();
+                if (data.isPresent()) {
+                    Matcher match = LIFT_SIGN_PATTERN.matcher(Texts.toPlain(data.get().getLine(0)));
                     if (match.matches()) {
                         final String action = match.group(1);
                         // TODO: Handle lift signs if I still want to use them
                     }
                 }
-                break;
+            }
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onBlockBreak(BlockBreakEvent event) {
-        final Location block = event.getBlock().getLocation();
-        if (plugin.getLiftManager(block.getWorld()).getLift(block) != null) {
-            plugin.getLiftManager(block.getWorld()).removeLift(new Point(block));
+    @Subscribe(order = Order.LAST)
+    public void onBlockBreak(PlayerBreakBlockEvent event) {
+        final Location block = event.getBlock();
+        if (plugin.getLiftManager(block.getExtent()).getLift(block) != null) {
+            plugin.getLiftManager(block.getExtent()).removeLift(block.getBlockPosition());
         } else {
-            final Location above = LiftUtil.mod(block, BlockFace.UP);
-            plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
+            final Vector3i above = block.getPosition().add(Direction.UP.toVector3d()).toInt();
+            plugin.getGame().getSyncScheduler().runTaskAfter(plugin, new Runnable() {
                 public void run() {
-                    if (above.getBlock().isEmpty() &&
-                            plugin.getLiftManager(above.getWorld()).getLift(above) != null) {
-                        plugin.getLiftManager(above.getWorld()).removeLift(new Point(above));
+                    if (block.getExtent().getBlockType(above) == BlockTypes.AIR &&
+                            plugin.getLiftManager(block.getExtent()).getLift(above) != null) {
+                        plugin.getLiftManager(block.getExtent()).removeLift(above);
                     }
                 }
             }, 1L);
         }
     }
 
-    @EventHandler
+    @Subscribe
     public void onSpecialBlockRegister(SpecialBlockRegisterEvent event) {
         LiftPlatesConfig config = plugin.getConfiguration();
-        if (!config.storedSpecialBlocks.contains(event.getRegisteredBlock())) {
+        if (!config.specialBlocks.containsValue(event.getRegisteredBlock())) {
             config.specialBlocks.put(event.getRegisteredBlock().getDefaultType(), event.getRegisteredBlock());
-            config.storedSpecialBlocks.add(event.getRegisteredBlock());
-            plugin.saveConfig();
+            try {
+                config.save();
+            } catch (IOException e) {
+                // Ignore, oh well
+            }
         }
     }
 
-    @EventHandler
-    public void onPlateToggle(BlockRedstoneEvent event) {
+    @Subscribe
+    public void onPlateToggle(BlockRedstoneUpdateEvent event) {
+        System.out.println("Toggling plate!");
         if (LiftUtil.isPressurePlate(event.getBlock().getType())) {
-            if (event.getNewCurrent() > 0) { // Turning on
-                plugin.getLiftRunner().plateTriggered(new WorldPoint(event.getBlock().getLocation()));
+            if (event.getNewSignalStrength() > 0) { // Turning on
+                plugin.getLiftRunner().plateTriggered(event.getBlock());
             }
         }
     }

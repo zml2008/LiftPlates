@@ -1,26 +1,31 @@
 package com.zachsthings.liftplates.util;
 
-import org.bukkit.Material;
-import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.BlockState;
-import org.bukkit.inventory.InventoryHolder;
-import org.bukkit.material.Attachable;
-import org.bukkit.material.MaterialData;
+import com.flowpowered.math.vector.Vector3i;
+import org.spongepowered.api.block.BlockState;
+import org.spongepowered.api.block.BlockType;
+import org.spongepowered.api.block.BlockTypes;
+import org.spongepowered.api.data.manipulator.block.AttachedData;
+import org.spongepowered.api.world.Location;
+import org.spongepowered.api.world.World;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * A simple queue to work around MC physics issues when setting blocks
  */
 public class BlockQueue {
-    public static enum BlockOrder {
+
+    public enum BlockOrder {
         /**
          * Applies changes from the top down. This is most useful when clearing an area.
          */
-        TOP_DOWN(true, new Comparator<Point>() {
-            public int compare(Point a, Point b) {
+        TOP_DOWN(true, new Comparator<Vector3i>() {
+            public int compare(Vector3i a, Vector3i b) {
                 return BOTTOM_UP.getComparator().compare(b, a);
             }
         }),
@@ -28,21 +33,20 @@ public class BlockQueue {
         /**
          * Applies changes from the bottom up. This is most useful when filling an area.
          */
-        BOTTOM_UP(false, new Comparator<Point>() {
-            public int compare(Point a, Point b) {
+        BOTTOM_UP(false, new Comparator<Vector3i>() {
+            public int compare(Vector3i a, Vector3i b) {
                 return a.getY() - b.getY();
             }
-        }),
-        ;
-        private final Comparator<Point> comparator;
+        }),;
+        private final Comparator<Vector3i> comparator;
         private final boolean changeLastFirst;
 
-        private BlockOrder(boolean changeLastFirst, Comparator<Point> comparator) {
+        BlockOrder(boolean changeLastFirst, Comparator<Vector3i> comparator) {
             this.changeLastFirst = changeLastFirst;
             this.comparator = comparator;
         }
 
-        public Comparator<Point> getComparator() {
+        public Comparator<Vector3i> getComparator() {
             return comparator;
         }
 
@@ -53,24 +57,18 @@ public class BlockQueue {
 
     private final BlockOrder order;
     private final World world;
-    private final Map<Point, MaterialData> changesNormal = new HashMap<Point, MaterialData>();
-    private final Map<Point, MaterialData> changesLast = new HashMap<Point, MaterialData>();
-	private final Map<Point, NMSTileEntityInterface.TEntWrapper> tileEntityBlocks = new HashMap<Point, NMSTileEntityInterface.TEntWrapper>();
+    private final Map<Vector3i, BlockState> changesNormal = new HashMap<Vector3i, BlockState>();
+    private final Map<Vector3i, BlockState> changesLast = new HashMap<Vector3i, BlockState>();
 
     public BlockQueue(World world, BlockOrder order) {
         this.world = world;
         this.order = order;
     }
 
-	public void set(Point point, MaterialData mat) {
-		set(point, mat, null);
-	}
-
-    public void set(Point point, MaterialData mat, NMSTileEntityInterface.TEntWrapper tentData) {
-        MaterialData testMat = mat;
-        if (mat.getItemType() == Material.AIR) {
-            Block testBlock = point.getBlock(world);
-            testMat = testBlock.getType().getNewData(testBlock.getData());
+    public void set(Vector3i point, BlockState mat) { // TODO: Work with block snapshots?
+        BlockState testMat = mat;
+        if (mat.getType() == BlockTypes.AIR) {
+            testMat = world.getBlock(point);
         }
 
         if (needsSideAttachment(testMat)) {
@@ -80,60 +78,51 @@ public class BlockQueue {
             changesNormal.put(point, mat);
             changesLast.remove(point);
         }
-
-		if (tentData != null) {
-			tileEntityBlocks.put(point, tentData);
-		}
     }
 
-    public void setAll(Map<Point, MaterialData> changes) {
-        for (Map.Entry<Point, MaterialData> entry : changes.entrySet()) {
+    public void setAll(Map<Vector3i, BlockState> changes) {
+        for (Map.Entry<Vector3i, BlockState> entry : changes.entrySet()) {
             set(entry.getKey(), entry.getValue());
         }
     }
 
     public void apply() {
-        List<Map.Entry<Point, MaterialData>> changesNormalList = new ArrayList<Map.Entry<Point, MaterialData>>(changesNormal.entrySet());
-        Collections.sort(changesNormalList, new Comparator<Map.Entry<Point, MaterialData>>() {
-            public int compare(Map.Entry<Point, MaterialData> a, Map.Entry<Point, MaterialData> b) {
+        List<Map.Entry<Vector3i, BlockState>> changesNormalList = new ArrayList<Map.Entry<Vector3i, BlockState>>(changesNormal.entrySet());
+        Collections.sort(changesNormalList, new Comparator<Map.Entry<Vector3i, BlockState>>() {
+            public int compare(Map.Entry<Vector3i, BlockState> a, Map.Entry<Vector3i, BlockState> b) {
                 return order.getComparator().compare(a.getKey(), b.getKey());
             }
         });
-        Iterable<Map.Entry<Point, MaterialData>> first = order.shouldChangeLastFirst() ? changesLast.entrySet() : changesNormalList;
-        Iterable<Map.Entry<Point, MaterialData>> second = order.shouldChangeLastFirst() ? changesNormalList : changesLast.entrySet();
+        Iterable<Map.Entry<Vector3i, BlockState>> first = order.shouldChangeLastFirst() ? changesLast.entrySet() : changesNormalList;
+        Iterable<Map.Entry<Vector3i, BlockState>> second = order.shouldChangeLastFirst() ? changesNormalList : changesLast.entrySet();
 
 
-        for (Map.Entry<Point, MaterialData> entry : first) {
-           applyBlockChange(entry.getKey(), entry.getValue());
+        for (Map.Entry<Vector3i, BlockState> entry : first) {
+            applyBlockChange(entry.getKey(), entry.getValue());
         }
 
-        for (Map.Entry<Point, MaterialData> entry : second) {
-			applyBlockChange(entry.getKey(), entry.getValue());
+        for (Map.Entry<Vector3i, BlockState> entry : second) {
+            applyBlockChange(entry.getKey(), entry.getValue());
         }
     }
 
-	protected void applyBlockChange(Point pt, MaterialData mat) {
-		MaterialData type = modifyMaterialData(mat);
-		Block target = pt.getBlock(world);
-		if (target.getType() == type.getItemType() && target.getData() == type.getData()) { // Only do things if the type is different
-			return;
-		}
+    protected void applyBlockChange(Vector3i pt, BlockState mat) {
+        BlockState type = modifyBlockState(mat);
+        Location target = world.getFullBlock(pt);
+        /*if (target.getType() == type.getType() && target.getData() == type.getData()) { // Only do things if the type is different
+            return;
+        }*/ // TODO: How do we do block equality
 
-		if (type.getItemType() == Material.AIR) { // Clear out inventory blocks so they don't drop items
-			BlockState state = target.getState();
-			if (state instanceof InventoryHolder) {
-				((InventoryHolder) state).getInventory().clear();
-			}
-		}
-		target.setTypeIdAndData(type.getItemTypeId(),
-				type.getData(), !setNoPhysics(type.getItemType()));
-		NMSTileEntityInterface.TEntWrapper tileEntityData = tileEntityBlocks.get(pt);
-		if (tileEntityData != null) {
-			NMSTileEntityInterface.applyData(tileEntityData, target);
-		}
-	}
+        /*if (type.getType() == BlockTypes.AIR) { // Clear out inventory blocks so they don't drop items // TODO: Is this necessary on Sponge?
+            BlockState state = target.getState();
+            if (state instanceof InventoryHolder) {
+                ((InventoryHolder) state).getInventory().clear();
+            }
+        }*/
+        target.replaceWith(type);
+    }
 
-    protected MaterialData modifyMaterialData(MaterialData input) {
+    protected BlockState modifyBlockState(BlockState input) {
         return input;
     }
 
@@ -142,13 +131,9 @@ public class BlockQueue {
      * @param data The material to check
      * @return Whether an attachment is required
      */
-    private static boolean needsSideAttachment(MaterialData data) {
-        if (data instanceof Attachable && ((Attachable) data).getAttachedFace() != BlockFace.DOWN) {
-            return true;
-        }
-        Material mat = data.getItemType();
-        return mat == Material.PISTON_BASE
-                || mat == Material.PISTON_STICKY_BASE;
+    private static boolean needsSideAttachment(BlockState data) {
+        return data.getManipulator(AttachedData.class).isPresent()
+                || data.getType() == BlockTypes.PISTON;
     }
 
     /**
@@ -158,8 +143,8 @@ public class BlockQueue {
      * @param mat The material to check
      * @return Whether physics should be stopped when setting a block of this type
      */
-    private static boolean setNoPhysics(Material mat) {
-        return mat == Material.PISTON_EXTENSION
-                || mat == Material.PISTON_MOVING_PIECE;
+    private static boolean setNoPhysics(BlockType mat) {
+        return mat == BlockTypes.PISTON_EXTENSION
+                || mat == BlockTypes.PISTON_HEAD;
     }
 }

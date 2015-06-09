@@ -4,13 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.zachsthings</groupId>
+  <groupId>ninja.leaping</groupId>
   <artifactId>liftplates</artifactId>
   <name>LiftPlates</name>
   <version>1.1-SNAPSHOT</version>
+  <url>http://leaping.ninja/liftplates</url>
   <properties>
       <project.build.sourceEncoding>utf-8</project.build.sourceEncoding>
-      <bukkitVersion>1.6.2-R0.1-SNAPSHOT</bukkitVersion>
   </properties>
 
   <scm>
@@ -20,26 +20,21 @@
   </scm>
   <repositories>
     <repository>
-      <id>bukkit-repo</id>
-      <url>http://repo.bukkit.org/content/groups/public/</url>
+      <id>sponge-repo</id>
+      <url>http://repo.spongepowered.org/maven</url>
     </repository>
   </repositories>
 
   <dependencies>
     <dependency>
-      <groupId>org.bukkit</groupId>
-      <artifactId>bukkit</artifactId>
-      <version>${bukkitVersion}</version>
-    </dependency>
-    <dependency> <!-- This is actually reflected at runtime, kept here to remind people though -->
-        <groupId>org.bukkit</groupId>
-        <artifactId>craftbukkit</artifactId>
-        <version>${bukkitVersion}</version>
+      <groupId>org.spongepowered</groupId>
+      <artifactId>spongeapi</artifactId>
+      <version>2.1-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.10</version>
+      <version>4.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -58,6 +53,8 @@
         <configuration>
           <preparationGoals>assembly:assembly</preparationGoals>
           <goals>assembly:assembly</goals>
+          <tagNameFormat>@{project.version}</tagNameFormat>
+          <scmCommentPrefix xml:space="preserve">[RELEASE] </scmCommentPrefix>
         </configuration>
       </plugin>
         <plugin>
@@ -69,6 +66,19 @@
                 <target>1.6</target>
             </configuration>
         </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>templating-maven-plugin</artifactId>
+        <version>1.0-alpha-3</version>
+        <executions>
+          <execution>
+            <id>filter-src</id>
+            <goals>
+              <goal>filter-sources</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
     <resources>
       <resource>
