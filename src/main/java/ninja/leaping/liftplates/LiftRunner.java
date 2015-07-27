@@ -105,14 +105,14 @@ public class LiftRunner implements Runnable {
                 lift = plugin.detectLift(point, true);
                 if (lift != null) {
                     Location specialLoc = point.getRelative(Direction.DOWN);
-                    SpecialBlock block = lift.getSpecialBlock(specialLoc.getType());
+                    SpecialBlock block = lift.getSpecialBlock(specialLoc.getBlockType());
                     if (block != null) {
                         block.plateTriggered(lift, specialLoc);
                         triggered = true;
                     }
                 }
             }
-            if (triggered && LiftUtil.isPressurePlate(point.getType())) {
+            if (triggered && LiftUtil.isPressurePlate(point.getBlockType())) {
                 point.remove(PoweredData.class);
             }
             i.remove();

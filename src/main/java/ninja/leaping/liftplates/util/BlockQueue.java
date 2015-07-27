@@ -1,11 +1,15 @@
 package ninja.leaping.liftplates.util;
 
 import com.flowpowered.math.vector.Vector3i;
+import org.spongepowered.api.block.BlockSnapshot;
 import org.spongepowered.api.block.BlockState;
 import org.spongepowered.api.block.BlockType;
 import org.spongepowered.api.block.BlockTypes;
+import org.spongepowered.api.block.tileentity.TileEntity;
+import org.spongepowered.api.block.tileentity.carrier.Chest;
+import org.spongepowered.api.block.tileentity.carrier.TileEntityCarrier;
 import org.spongepowered.api.data.manipulator.block.AttachedData;
-import org.spongepowered.api.world.Location;
+import org.spongepowered.api.item.inventory.Carrier;
 import org.spongepowered.api.world.World;
 
 import java.util.ArrayList;
@@ -57,17 +61,17 @@ public class BlockQueue {
 
     private final BlockOrder order;
     private final World world;
-    private final Map<Vector3i, BlockState> changesNormal = new HashMap<Vector3i, BlockState>();
-    private final Map<Vector3i, BlockState> changesLast = new HashMap<Vector3i, BlockState>();
+    private final Map<Vector3i, BlockSnapshot> changesNormal = new HashMap<Vector3i, BlockSnapshot>();
+    private final Map<Vector3i, BlockSnapshot> changesLast = new HashMap<Vector3i, BlockSnapshot>();
 
     public BlockQueue(World world, BlockOrder order) {
         this.world = world;
         this.order = order;
     }
 
-    public void set(Vector3i point, BlockState mat) { // TODO: Work with block snapshots?
-        BlockState testMat = mat;
-        if (mat.getType() == BlockTypes.AIR) {
+    public void set(Vector3i point, BlockSnapshot mat) { // TODO: Work with block snapshots?
+        BlockState testMat = mat.getState();
+        if (testMat.getType() == BlockTypes.AIR) {
             testMat = world.getBlock(point);
         }
 
@@ -80,46 +84,41 @@ public class BlockQueue {
         }
     }
 
-    public void setAll(Map<Vector3i, BlockState> changes) {
-        for (Map.Entry<Vector3i, BlockState> entry : changes.entrySet()) {
+    public void setAll(Map<Vector3i, BlockSnapshot> changes) {
+        for (Map.Entry<Vector3i, BlockSnapshot> entry : changes.entrySet()) {
             set(entry.getKey(), entry.getValue());
         }
     }
 
     public void apply() {
-        List<Map.Entry<Vector3i, BlockState>> changesNormalList = new ArrayList<Map.Entry<Vector3i, BlockState>>(changesNormal.entrySet());
-        Collections.sort(changesNormalList, new Comparator<Map.Entry<Vector3i, BlockState>>() {
-            public int compare(Map.Entry<Vector3i, BlockState> a, Map.Entry<Vector3i, BlockState> b) {
+        List<Map.Entry<Vector3i, BlockSnapshot>> changesNormalList = new ArrayList<Map.Entry<Vector3i, BlockSnapshot>>(changesNormal.entrySet());
+        Collections.sort(changesNormalList, new Comparator<Map.Entry<Vector3i, BlockSnapshot>>() {
+            public int compare(Map.Entry<Vector3i, BlockSnapshot> a, Map.Entry<Vector3i, BlockSnapshot> b) {
                 return order.getComparator().compare(a.getKey(), b.getKey());
             }
         });
-        Iterable<Map.Entry<Vector3i, BlockState>> first = order.shouldChangeLastFirst() ? changesLast.entrySet() : changesNormalList;
-        Iterable<Map.Entry<Vector3i, BlockState>> second = order.shouldChangeLastFirst() ? changesNormalList : changesLast.entrySet();
+        Iterable<Map.Entry<Vector3i, BlockSnapshot>> first = order.shouldChangeLastFirst() ? changesLast.entrySet() : changesNormalList;
+        Iterable<Map.Entry<Vector3i, BlockSnapshot>> second = order.shouldChangeLastFirst() ? changesNormalList : changesLast.entrySet();
 
 
-        for (Map.Entry<Vector3i, BlockState> entry : first) {
+        for (Map.Entry<Vector3i, BlockSnapshot> entry : first) {
             applyBlockChange(entry.getKey(), entry.getValue());
         }
 
-        for (Map.Entry<Vector3i, BlockState> entry : second) {
+        for (Map.Entry<Vector3i, BlockSnapshot> entry : second) {
             applyBlockChange(entry.getKey(), entry.getValue());
         }
     }
 
-    protected void applyBlockChange(Vector3i pt, BlockState mat) {
-        BlockState type = modifyBlockState(mat);
-        Location target = world.getFullBlock(pt);
-        /*if (target.getType() == type.getType() && target.getData() == type.getData()) { // Only do things if the type is different
-            return;
-        }*/ // TODO: How do we do block equality
-
-        /*if (type.getType() == BlockTypes.AIR) { // Clear out inventory blocks so they don't drop items // TODO: Is this necessary on Sponge?
-            BlockState state = target.getState();
-            if (state instanceof InventoryHolder) {
-                ((InventoryHolder) state).getInventory().clear();
+    protected void applyBlockChange(Vector3i pt, BlockSnapshot mat) {
+        mat.setBlockState(modifyBlockState(mat.getState()));
+        /*if (mat.getState().getType().equals(BlockTypes.AIR)) {
+            TileEntity stateEnt = null; // TODO: Add necessary API
+            if (stateEnt instanceof TileEntityCarrier) {
+                ((TileEntityCarrier) stateEnt).getInventory().clear();
             }
         }*/
-        target.replaceWith(type);
+        world.setBlockSnapshot(pt, mat);
     }
 
     protected BlockState modifyBlockState(BlockState input) {

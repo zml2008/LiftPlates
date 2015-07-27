@@ -58,14 +58,14 @@ public class LiftPlatesListener {
             plugin.getLiftManager(block.getExtent()).removeLift(block.getBlockPosition());
         } else {
             final Vector3i above = block.getPosition().add(Direction.UP.toVector3d()).toInt();
-            plugin.getGame().getSyncScheduler().runTaskAfter(plugin, new Runnable() {
+            plugin.getGame().getScheduler().getTaskBuilder().delay(1L).execute(new Runnable() {
                 public void run() {
                     if (block.getExtent().getBlockType(above) == BlockTypes.AIR &&
                             plugin.getLiftManager(block.getExtent()).getLift(above) != null) {
                         plugin.getLiftManager(block.getExtent()).removeLift(above);
                     }
                 }
-            }, 1L);
+            }).submit(plugin);
         }
     }
 
@@ -84,9 +84,8 @@ public class LiftPlatesListener {
 
     @Subscribe
     public void onPlateToggle(BlockRedstoneUpdateEvent event) {
-        System.out.println("Toggling plate!");
-        if (LiftUtil.isPressurePlate(event.getBlock().getType())) {
-            if (event.getNewSignalStrength() > 0) { // Turning on
+        if (LiftUtil.isPressurePlate(event.getBlock().getBlockType())) {
+            if (event.getNewSignalStrength() > 0 && event.getOldSignalStrength() == 0) { // Turning on
                 plugin.getLiftRunner().plateTriggered(event.getBlock());
             }
         }

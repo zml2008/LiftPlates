@@ -11,6 +11,7 @@ import org.spongepowered.api.world.World;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author zml2008
@@ -24,7 +25,7 @@ public class LiftManager {
     /**
      * The lifts stored in this LiftManager
      */
-    private Map<Vector3i, Lift> lifts = new HashMap<Vector3i, Lift>();
+    private Map<Vector3i, Lift> lifts = new ConcurrentHashMap<Vector3i, Lift>();
 
     public LiftManager(LiftPlatesPlugin plugin, World world) {
         this.plugin = plugin;
@@ -98,7 +99,7 @@ public class LiftManager {
         }
         ConfigurationNode objects = store.getNode("lifts");
         if (objects.isVirtual()) {
-            System.out.println("No 'lifts' list in the configuration!");
+            plugin.getLogger().warn("No 'lifts' list in the configuration!");
             return;
         }
 

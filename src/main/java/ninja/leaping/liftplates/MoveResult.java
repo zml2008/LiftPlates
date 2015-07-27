@@ -1,10 +1,12 @@
 package ninja.leaping.liftplates;
 
+import com.google.common.base.Objects;
+
 /**
  * The result from a {@link Lift}'s motion.
  */
 public class MoveResult {
-    public static enum Type {
+    public enum Type {
         CONTINUE(false),
         DELAY(true),
         STOP(true),
@@ -39,5 +41,13 @@ public class MoveResult {
 
     public int getAmount() {
         return amount;
+    }
+
+    @Override
+    public String toString() {
+        return Objects.toStringHelper(this)
+                .add("type", type)
+                .add("amount", amount)
+                .toString();
     }
 }

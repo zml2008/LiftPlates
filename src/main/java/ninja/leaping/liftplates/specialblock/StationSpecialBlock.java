@@ -1,7 +1,6 @@
 package ninja.leaping.liftplates.specialblock;
 
 import com.flowpowered.math.vector.Vector3i;
-import com.google.common.base.Optional;
 import ninja.leaping.liftplates.Lift;
 import ninja.leaping.liftplates.LiftContents;
 import ninja.leaping.liftplates.LiftRunner;
@@ -38,12 +37,10 @@ public class StationSpecialBlock extends SpecialBlock {
         if (!activeBlocks.contains(block)) {
             activeBlocks.add(block);
             CallLift call = new CallLift(block, lift);
-            Optional<Task> task = lift.getPlugin().getGame().getSyncScheduler().runRepeatingTask(lift.getPlugin(), call, LiftRunner.RUN_FREQUENCY);
-            if (task.isPresent()) {
-                call.task = task.get();
-            } else {
-                lift.getPlugin().getLogger().warn("Unable to schedule call task for call button at " + block);
-            }
+            call.task = lift.getPlugin().getGame().getScheduler().getTaskBuilder()
+                    .execute(call)
+                    .interval(LiftRunner.RUN_FREQUENCY)
+                    .submit(lift.getPlugin());
         }
     }
 

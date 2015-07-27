@@ -10,26 +10,14 @@ import ninja.leaping.configurate.objectmapping.serialize.TypeSerializer;
 /**
  * Type serializer for SpecialBlock instances
  */
-public class SpecialBlockTypeSerializer implements TypeSerializer {
-
+public class SpecialBlockTypeSerializer implements TypeSerializer<SpecialBlock> {
     @Override
-    public boolean isApplicable(TypeToken<?> type) {
-        return SpecialBlock.class.isAssignableFrom(type.getRawType());
-    }
-
-    @Override
-    public Object deserialize(TypeToken<?> type, ConfigurationNode value) throws ObjectMappingException {
-        if (!isApplicable(type)) {
-            throw new InvalidTypeException(type);
-        }
+    public SpecialBlock deserialize(TypeToken<?> type, ConfigurationNode value) throws ObjectMappingException {
         return SpecialBlock.byName(value.getString());
     }
 
     @Override
-    public void serialize(TypeToken<?> type, Object obj, ConfigurationNode value) throws ObjectMappingException {
-        if (!isApplicable(type)) {
-            throw new InvalidTypeException(type);
-        }
-        value.setValue(((SpecialBlock) obj).getName());
+    public void serialize(TypeToken<?> type, SpecialBlock obj, ConfigurationNode value) throws ObjectMappingException {
+        value.setValue(obj.getName());
     }
 }

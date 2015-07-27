@@ -149,8 +149,7 @@ public class Lift {
             return;
         }
 
-        World world = manager.getWorld();
-        world.getFullBlock(start).getRelative(Direction.UP);
+        final World world = manager.getWorld();
         if (!world.getBlock(start).equals(world.getBlock(current))) { // Different block type
             edgeBlocks.add(current);
             return;

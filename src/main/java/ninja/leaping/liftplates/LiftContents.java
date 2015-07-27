@@ -5,8 +5,8 @@ import com.google.common.base.Optional;
 import ninja.leaping.liftplates.specialblock.SpecialBlock;
 import ninja.leaping.liftplates.util.BlockQueue;
 import ninja.leaping.liftplates.util.IntPairKey;
+import org.spongepowered.api.block.BlockSnapshot;
 import org.spongepowered.api.block.BlockState;
-import org.spongepowered.api.block.BlockType;
 import org.spongepowered.api.block.BlockTypes;
 import org.spongepowered.api.data.manipulator.block.PoweredData;
 import org.spongepowered.api.entity.Entity;
@@ -150,10 +150,10 @@ public class LiftContents {
                 if (LiftUtil.isPressurePlate(input.getType())
                         || input.getType() == BlockTypes.STONE_BUTTON
                         || input.getType() == BlockTypes.WOODEN_BUTTON) {
-                    input = input.withoutData(PoweredData.class).get();
+                    input = input.withoutData(PoweredData.class).or(input);
                 } else if (input.getType() == BlockTypes.REDSTONE_TORCH) {
                     input = input.withData(lift.getPlugin().getGame().getRegistry().getManipulatorRegistry().getBuilder(PoweredData.class).get()
-                            .create()).get();
+                            .create()).or(input);
                 }
                 return super.modifyBlockState(input);
             }
@@ -173,18 +173,20 @@ public class LiftContents {
 
         // Move
         for (Vector3i loc : getBlocks()) {
-            BlockState oldBlock = lift.getManager().getWorld().getBlock(loc);
+            BlockSnapshot oldBlock = lift.getManager().getWorld().getBlockSnapshot(loc);
             Vector3i newLoc = loc.add(direction.toVector3d().toInt());
             locations.add(newLoc);
-            BlockType newBlock = lift.getManager().getWorld().getBlockType(newLoc);
+            BlockSnapshot newBlock = lift.getManager().getWorld().getBlockSnapshot(newLoc);
 
-            if (newBlock != BlockTypes.AIR && !getBlocks().contains(newLoc)) {
+            if (newBlock.getState().getType() != BlockTypes.AIR && !getBlocks().contains(newLoc)) {
                 type = MoveResult.Type.BLOCK;
                 break;
+
             }
 
             addBlocks.set(newLoc, oldBlock);
-            removeBlocks.set(loc, BlockTypes.AIR.getDefaultState());
+            newBlock.setBlockState(BlockTypes.AIR.getDefaultState());
+            removeBlocks.set(loc, newBlock);
 
         }
 

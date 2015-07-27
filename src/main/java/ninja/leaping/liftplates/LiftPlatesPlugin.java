@@ -10,6 +10,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Collections2;
+import com.google.common.reflect.TypeToken;
 import ninja.leaping.liftplates.specialblock.SpecialBlock;
 import ninja.leaping.liftplates.util.SpecialBlockTypeSerializer;
 import ninja.leaping.liftplates.util.Vector3iTypeSerializer;
@@ -56,8 +57,8 @@ import javax.inject.Inject;
 @Plugin(id = PomData.ARTIFACT_ID, name = PomData.NAME, version = PomData.VERSION)
 public class LiftPlatesPlugin {
     static {
-        TypeSerializers.registerSerializer(new SpecialBlockTypeSerializer());
-        TypeSerializers.registerSerializer(new Vector3iTypeSerializer());
+        TypeSerializers.getDefaultSerializers().registerType(TypeToken.of(SpecialBlock.class), new SpecialBlockTypeSerializer());
+        TypeSerializers.getDefaultSerializers().registerType(TypeToken.of(Vector3i.class), new Vector3iTypeSerializer());
     }
     @Inject private Game game;
     @Inject private Logger logger;
@@ -177,7 +178,11 @@ public class LiftPlatesPlugin {
                 .build(), "lslifts");
 
         liftRunner = new LiftRunner(this);
-        game.getSyncScheduler().runRepeatingTaskAfter(this, liftRunner, LiftRunner.RUN_FREQUENCY, LiftRunner.RUN_FREQUENCY);
+        game.getScheduler().getTaskBuilder()
+                .execute(liftRunner)
+                .delay(LiftRunner.RUN_FREQUENCY)
+                .interval(LiftRunner.RUN_FREQUENCY)
+                .submit(this);
     }
 
     @Subscribe
